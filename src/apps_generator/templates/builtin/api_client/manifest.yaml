@@ -1,0 +1,15 @@
+name: api-client
+version: "1.0.0"
+description: "Shared API client with auth token injection, tenant headers, and error handling"
+tags: [api, client, fetch, typescript]
+engine: jinja2
+required:
+  - projectName
+derived:
+  - source: projectName
+    variants: [camel, pascal, snake, kebab, title]
+features: []
+exclude: []
+hooks:
+  git_init: true
+  message: "API client generated! Run: cd {{ projectName }} && npm install && npm run build"

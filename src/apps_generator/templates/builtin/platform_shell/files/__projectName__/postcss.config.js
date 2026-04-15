@@ -1,0 +1,8 @@
+{% if features.tailwind %}
+export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+{% endif %}

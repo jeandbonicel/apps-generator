@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "projectName": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Project name (kebab-case)"
+    },
+    "groupId": {
+      "type": "string",
+      "default": "com.example",
+      "description": "Maven/Gradle group ID"
+    },
+    "basePackage": {
+      "type": "string",
+      "default": "com.example",
+      "description": "Java base package"
+    },
+    "javaVersion": {
+      "type": "integer",
+      "default": 21,
+      "enum": [17, 21],
+      "description": "Java version"
+    },
+    "springBootVersion": {
+      "type": "string",
+      "default": "3.3.0",
+      "description": "Spring Boot version"
+    },
+    "containerRegistry": {
+      "type": "string",
+      "default": "ghcr.io",
+      "description": "Container registry host"
+    },
+    "containerRegistryOrg": {
+      "type": "string",
+      "default": "your-org",
+      "description": "Container registry organization"
+    },
+    "k8sNamespace": {
+      "type": "string",
+      "default": "default",
+      "description": "Kubernetes namespace"
+    },
+    "dbName": {
+      "type": "string",
+      "default": "",
+      "description": "PostgreSQL database name (defaults to projectName)"
+    },
+    "oidcIssuerUri": {
+      "type": "string",
+      "default": "https://auth.example.com/realms/main",
+      "description": "OIDC issuer URI for resource server"
+    }
+  },
+  "required": ["projectName", "groupId", "basePackage"]
+}

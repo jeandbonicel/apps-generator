@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ projectName }}-config
+data:
+  SPRING_PROFILES_ACTIVE: "default"
+  SERVER_PORT: "{{ gatewayPort }}"
+{% if features.oauth2 %}
+  SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: "{{ oidcIssuerUri }}"
+{% endif %}

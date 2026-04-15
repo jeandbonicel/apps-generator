@@ -1,0 +1,9 @@
+projectName: ""
+projectTitle: ""
+primaryColor: "blue"
+nodeVersion: 20
+packageManager: "pnpm"
+npmRegistry: "github"
+containerRegistry: "ghcr.io"
+containerRegistryOrg: "your-org"
+k8sNamespace: "default"

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ projectName }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ gatewayPort }}
+      targetPort: {{ gatewayPort }}
+      protocol: TCP
+  selector:
+    app: {{ projectName }}

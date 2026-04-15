@@ -1,0 +1,33 @@
+name: api-gateway
+version: "1.0.0"
+description: "Spring Cloud Gateway (BFF) with JWT validation, tenant forwarding, and route management"
+tags: [backend, java, spring-cloud, gateway, bff]
+engine: jinja2
+required:
+  - projectName
+  - groupId
+  - basePackage
+derived:
+  - source: projectName
+    variants: [camel, pascal, snake, kebab, title]
+  - source: basePackage
+    variants: [path]
+features:
+  - name: oauth2
+    description: "OAuth2/OIDC JWT validation"
+    default: true
+  - name: docker
+    description: "Dockerfile and docker-compose"
+    default: true
+  - name: kubernetes
+    description: "Kubernetes manifests (Kustomize)"
+    default: true
+  - name: cicd
+    description: "GitHub Actions CI/CD workflows"
+    default: true
+exclude:
+  - "*.jar"
+  - "*.class"
+hooks:
+  git_init: true
+  message: "API Gateway generated! Run: cd {{ projectName }} && ./gradlew bootRun"

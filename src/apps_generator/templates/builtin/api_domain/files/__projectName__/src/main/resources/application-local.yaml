@@ -1,0 +1,20 @@
+spring:
+{% if features.database %}
+  datasource:
+    url: jdbc:postgresql://localhost:5432/{{ dbName if dbName else projectName }}
+    username: postgres
+    password: postgres
+  jpa:
+    show-sql: true
+{% endif %}
+{% if features.oauth2 %}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: {{ oidcIssuerUri }}
+{% endif %}
+
+logging:
+  level:
+    {{ basePackage }}: DEBUG

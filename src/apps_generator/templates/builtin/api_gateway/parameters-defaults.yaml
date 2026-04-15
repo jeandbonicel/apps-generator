@@ -1,0 +1,12 @@
+projectName: ""
+projectTitle: ""
+groupId: "com.example"
+basePackage: "com.example"
+javaVersion: 21
+springBootVersion: "3.3.0"
+springCloudVersion: "2023.0.2"
+gatewayPort: 8080
+oidcIssuerUri: "https://auth.example.com/realms/main"
+containerRegistry: "ghcr.io"
+containerRegistryOrg: "your-org"
+k8sNamespace: "default"

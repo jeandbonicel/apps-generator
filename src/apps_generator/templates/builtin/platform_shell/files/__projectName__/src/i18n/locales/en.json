@@ -1,0 +1,9 @@
+{
+  "welcome": "Welcome",
+  "gettingStarted": "Getting Started",
+  "gettingStartedDesc": "This is your platform shell. Add remote micro-frontends to extend functionality.",
+  "signIn": "Sign In",
+  "signInPrompt": "Please sign in to continue.",
+  "organization": "Organization",
+  "home": "Home"
+}

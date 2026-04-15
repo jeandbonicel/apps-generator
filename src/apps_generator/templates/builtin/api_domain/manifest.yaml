@@ -1,0 +1,41 @@
+name: api-domain
+version: "1.0.0"
+description: "Spring Boot 3 backend with DDD architecture, PostgreSQL, Docker, Kubernetes, and CI/CD"
+tags: [backend, java, spring-boot, ddd, postgresql]
+engine: jinja2
+required:
+  - projectName
+  - groupId
+  - basePackage
+derived:
+  - source: projectName
+    variants: [camel, pascal, snake, kebab, title]
+  - source: basePackage
+    variants: [path]
+features:
+  - name: database
+    description: "PostgreSQL with Liquibase migrations"
+    default: true
+  - name: oauth2
+    description: "OAuth2/OIDC resource server security"
+    default: true
+  - name: docker
+    description: "Dockerfile and docker-compose"
+    default: true
+  - name: kubernetes
+    description: "Kubernetes manifests (Kustomize)"
+    default: true
+  - name: cicd
+    description: "GitHub Actions CI/CD workflows"
+    default: true
+  - name: openapi
+    description: "OpenAPI/Swagger documentation"
+    default: true
+exclude:
+  - "*.jar"
+  - "*.class"
+  - "gradlew"
+  - "gradlew.bat"
+hooks:
+  git_init: true
+  message: "API project generated! Run: cd {{ projectName }} && ./gradlew bootRun"

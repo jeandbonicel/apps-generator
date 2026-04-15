@@ -1,0 +1,67 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+{% if features.database %}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/{{ dbName if dbName else projectName }}
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+{% endif %}
+{% if features.oauth2 %}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: {{ oidcIssuerUri }}
+{% endif %}
+    depends_on:
+{% if features.database %}
+      db:
+        condition: service_healthy
+{% endif %}
+    networks:
+      - backend
+{% if features.database %}
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: {{ dbName if dbName else projectName }}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - backend
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@local.dev
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    networks:
+      - backend
+{% endif %}
+
+networks:
+  backend:
+    driver: bridge
+{% if features.database %}
+
+volumes:
+  pgdata:
+{% endif %}

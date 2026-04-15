@@ -1,0 +1,49 @@
+name: Deploy to Kubernetes
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - prod
+      image_tag:
+        description: "Docker image tag to deploy"
+        required: true
+        default: main
+
+env:
+  REGISTRY: {{ containerRegistry }}
+  IMAGE_NAME: {% raw %}${{ github.repository }}{% endraw %}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: {% raw %}${{ github.event.inputs.environment }}{% endraw %}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "{% raw %}${{ secrets.KUBECONFIG }}{% endraw %}" | base64 -d > $HOME/.kube/config
+
+      - name: Deploy with Kustomize
+        run: |
+          cd k8s/overlays/{% raw %}${{ github.event.inputs.environment }}{% endraw %}
+          kustomize edit set image {% raw %}${{ env.REGISTRY }}{% endraw %}/{% raw %}${{ env.IMAGE_NAME }}{% endraw %}={% raw %}${{ env.REGISTRY }}{% endraw %}/{% raw %}${{ env.IMAGE_NAME }}{% endraw %}:{% raw %}${{ github.event.inputs.image_tag }}{% endraw %}
+          kustomize build . | kubectl apply -f -
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/{{ projectName }} \
+            -n {{ k8sNamespace }} \
+            --timeout=300s

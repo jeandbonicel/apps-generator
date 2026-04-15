@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ projectName }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ projectName }}
+  template:
+    metadata:
+      labels:
+        app: {{ projectName }}
+    spec:
+      containers:
+        - name: {{ projectName }}
+          image: {{ containerRegistry }}/{{ containerRegistryOrg }}/{{ projectName }}:latest
+          ports:
+            - containerPort: {{ gatewayPort }}
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: {{ gatewayPort }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: {{ gatewayPort }}
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          envFrom:
+            - configMapRef:
+                name: {{ projectName }}-config

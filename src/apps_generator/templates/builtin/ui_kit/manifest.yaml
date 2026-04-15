@@ -1,0 +1,17 @@
+name: ui-kit
+version: "1.0.0"
+description: "Shared UI component library with shadcn/ui, Tailwind CSS, and Storybook"
+tags: [ui, components, shadcn, storybook, tailwind, design-system]
+engine: jinja2
+required:
+  - projectName
+derived:
+  - source: projectName
+    variants: [camel, pascal, snake, kebab, title]
+features: []
+exclude:
+  - "*.png"
+  - "*.ico"
+hooks:
+  git_init: true
+  message: "UI Kit generated! Run: cd {{ projectName }} && npm install && npm run dev"

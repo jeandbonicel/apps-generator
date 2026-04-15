@@ -1,0 +1,5 @@
+docker: features.docker
+k8s: features.kubernetes
+.github: features.cicd
+tailwind.config.ts: features.tailwind
+postcss.config.js: features.tailwind

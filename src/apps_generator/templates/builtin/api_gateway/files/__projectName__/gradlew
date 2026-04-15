@@ -1,0 +1,2 @@
+#!/bin/sh
+echo "Run 'gradle wrapper' to generate the real Gradle wrapper" && exit 1

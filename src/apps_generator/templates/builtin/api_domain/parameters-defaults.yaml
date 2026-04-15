@@ -1,0 +1,10 @@
+projectName: ""
+groupId: "com.example"
+basePackage: "com.example"
+javaVersion: 21
+springBootVersion: "3.3.0"
+containerRegistry: "ghcr.io"
+containerRegistryOrg: "your-org"
+k8sNamespace: "default"
+dbName: ""
+oidcIssuerUri: "https://auth.example.com/realms/main"

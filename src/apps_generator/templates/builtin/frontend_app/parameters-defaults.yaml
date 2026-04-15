@@ -1,0 +1,11 @@
+projectName: ""
+projectTitle: ""
+nodeVersion: 20
+packageManager: "pnpm"
+apiBaseUrl: "/api"
+exposedModule: "./App"
+devPort: 5001
+pages: "[]"
+containerRegistry: "ghcr.io"
+containerRegistryOrg: "your-org"
+k8sNamespace: "default"

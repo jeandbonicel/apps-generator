@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: {{ k8sNamespace }}
+
+resources:
+  - ../../base
+
+patches:
+  - target:
+      kind: Deployment
+      name: {{ projectName }}
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 2
+
+images:
+  - name: {{ containerRegistry }}/{{ containerRegistryOrg }}/{{ projectName }}
+    newTag: latest

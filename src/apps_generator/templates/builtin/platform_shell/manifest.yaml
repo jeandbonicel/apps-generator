@@ -1,0 +1,31 @@
+name: platform-shell
+version: "1.0.0"
+description: "React platform shell with Module Federation host, OAuth2/OIDC auth, and multi-tenant org switcher"
+tags: [frontend, react, shell, module-federation, oauth2, multi-tenant]
+engine: jinja2
+required:
+  - projectName
+derived:
+  - source: projectName
+    variants: [camel, pascal, snake, kebab, title]
+features:
+  - name: docker
+    description: "Dockerfile and docker-compose"
+    default: true
+  - name: kubernetes
+    description: "Kubernetes manifests (Kustomize)"
+    default: true
+  - name: cicd
+    description: "GitHub Actions CI/CD workflows"
+    default: true
+  - name: tailwind
+    description: "Tailwind CSS styling"
+    default: true
+exclude:
+  - "*.png"
+  - "*.ico"
+  - "*.svg"
+  - "*.woff*"
+hooks:
+  git_init: true
+  message: "Platform shell generated! Run: cd {{ projectName }} && npm install && npm run dev"

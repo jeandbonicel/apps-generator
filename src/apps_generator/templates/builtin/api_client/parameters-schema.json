@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "projectName": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Package name (kebab-case)"
+    },
+    "projectTitle": {
+      "type": "string",
+      "default": "",
+      "description": "Display name"
+    },
+    "apiBaseUrl": {
+      "type": "string",
+      "default": "/api",
+      "description": "Default API base URL"
+    },
+    "nodeVersion": {
+      "type": "integer",
+      "default": 20
+    }
+  },
+  "required": ["projectName"]
+}

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "projectName": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Package name (kebab-case)"
+    },
+    "projectTitle": {
+      "type": "string",
+      "default": "",
+      "description": "Display name for the UI kit"
+    },
+    "primaryColor": {
+      "type": "string",
+      "default": "blue",
+      "description": "Primary color theme for shadcn/ui"
+    },
+    "nodeVersion": {
+      "type": "integer",
+      "default": 20
+    },
+    "packageManager": {
+      "type": "string",
+      "enum": ["npm", "pnpm", "yarn"],
+      "default": "pnpm"
+    },
+    "npmRegistry": {
+      "type": "string",
+      "enum": ["github", "npm"],
+      "default": "github",
+      "description": "Where to publish: 'github' (GitHub Packages) or 'npm' (npmjs.com)"
+    },
+    "containerRegistry": {
+      "type": "string",
+      "default": "ghcr.io",
+      "description": "Container registry for Storybook image"
+    },
+    "containerRegistryOrg": {
+      "type": "string",
+      "default": "your-org",
+      "description": "Registry organization"
+    },
+    "k8sNamespace": {
+      "type": "string",
+      "default": "default",
+      "description": "Kubernetes namespace for Storybook deployment"
+    }
+  },
+  "required": ["projectName"]
+}

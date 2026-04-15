@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "projectName": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Project name (kebab-case)"
+    },
+    "projectTitle": {
+      "type": "string",
+      "default": "",
+      "description": "Display name"
+    },
+    "nodeVersion": {
+      "type": "integer",
+      "default": 20
+    },
+    "packageManager": {
+      "type": "string",
+      "enum": ["npm", "pnpm", "yarn"],
+      "default": "pnpm"
+    },
+    "apiBaseUrl": {
+      "type": "string",
+      "default": "/api",
+      "description": "Backend API base URL"
+    },
+    "exposedModule": {
+      "type": "string",
+      "default": "./App",
+      "description": "Module Federation exposed module name"
+    },
+    "devPort": {
+      "type": "integer",
+      "default": 5001,
+      "description": "Dev server port"
+    },
+    "pages": {
+      "type": "string",
+      "default": "[]",
+      "description": "JSON array of page configs: [{\"path\":\"overview\",\"label\":\"Overview\"},{\"path\":\"list\",\"label\":\"List\"}]"
+    },
+    "containerRegistry": {
+      "type": "string",
+      "default": "ghcr.io"
+    },
+    "containerRegistryOrg": {
+      "type": "string",
+      "default": "your-org"
+    },
+    "k8sNamespace": {
+      "type": "string",
+      "default": "default"
+    }
+  },
+  "required": ["projectName"]
+}

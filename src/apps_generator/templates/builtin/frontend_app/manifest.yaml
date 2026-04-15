@@ -1,0 +1,32 @@
+name: frontend-app
+version: "1.0.0"
+description: "React micro-frontend (Module Federation remote) with Vite, TypeScript, and Tailwind CSS"
+tags: [frontend, react, micro-frontend, module-federation, vite, typescript]
+engine: jinja2
+required:
+  - projectName
+derived:
+  - source: projectName
+    variants: [camel, pascal, snake, kebab, title]
+features:
+  - name: docker
+    description: "Dockerfile and docker-compose"
+    default: true
+  - name: kubernetes
+    description: "Kubernetes manifests (Kustomize)"
+    default: true
+  - name: cicd
+    description: "GitHub Actions CI/CD workflows"
+    default: true
+  - name: tailwind
+    description: "Tailwind CSS styling"
+    default: true
+  - name: tanstackRouter
+    description: "TanStack Router for routing"
+    default: true
+exclude:
+  - "*.png"
+  - "*.ico"
+hooks:
+  git_init: true
+  message: "Frontend app generated! Run: cd {{ projectName }} && npm install && npm run dev"

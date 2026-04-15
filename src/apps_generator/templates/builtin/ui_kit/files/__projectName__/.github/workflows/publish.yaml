@@ -1,0 +1,67 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+{% if npmRegistry == "github" %}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: {{ nodeVersion }}
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@{{ containerRegistryOrg }}"
+{% else %}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: {{ nodeVersion }}
+          registry-url: "https://registry.npmjs.org"
+{% endif %}
+{% if packageManager == "pnpm" %}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build library
+        run: pnpm run build
+{% elif packageManager == "yarn" %}
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build library
+        run: yarn build
+{% else %}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build library
+        run: npm run build
+{% endif %}
+
+      - name: Publish to npm
+        run: npm publish
+        env:
+{% if npmRegistry == "github" %}
+          NODE_AUTH_TOKEN: {% raw %}${{ secrets.GITHUB_TOKEN }}{% endraw %}
+{% else %}
+          NODE_AUTH_TOKEN: {% raw %}${{ secrets.NPM_TOKEN }}{% endraw %}
+{% endif %}

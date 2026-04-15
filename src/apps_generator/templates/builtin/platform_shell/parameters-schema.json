@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "projectName": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Project name (kebab-case)"
+    },
+    "projectTitle": {
+      "type": "string",
+      "default": "",
+      "description": "Display name for the platform"
+    },
+    "authProvider": {
+      "type": "string",
+      "enum": ["clerk", "oidc"],
+      "default": "clerk",
+      "description": "Authentication provider: 'clerk' (Clerk.com) or 'oidc' (generic OIDC with Keycloak/Auth0/Azure AD)"
+    },
+    "clerkPublishableKey": {
+      "type": "string",
+      "default": "pk_test_REPLACE_ME",
+      "description": "Clerk publishable key (from Clerk dashboard). Only used when authProvider=clerk"
+    },
+    "oidcAuthority": {
+      "type": "string",
+      "default": "https://auth.example.com/realms/main",
+      "description": "OIDC issuer URL. Only used when authProvider=oidc"
+    },
+    "oidcClientId": {
+      "type": "string",
+      "default": "platform-shell",
+      "description": "OAuth2 client ID. Only used when authProvider=oidc"
+    },
+    "oidcScopes": {
+      "type": "string",
+      "default": "openid profile email",
+      "description": "OAuth2 scopes. Only used when authProvider=oidc"
+    },
+    "apiBaseUrl": {
+      "type": "string",
+      "default": "/api",
+      "description": "Backend API base URL"
+    },
+    "tenantsEndpoint": {
+      "type": "string",
+      "default": "/api/tenants",
+      "description": "API endpoint returning tenant list"
+    },
+    "nodeVersion": {
+      "type": "integer",
+      "default": 20
+    },
+    "packageManager": {
+      "type": "string",
+      "enum": ["npm", "pnpm", "yarn"],
+      "default": "pnpm"
+    },
+    "containerRegistry": {
+      "type": "string",
+      "default": "ghcr.io"
+    },
+    "containerRegistryOrg": {
+      "type": "string",
+      "default": "your-org"
+    },
+    "k8sNamespace": {
+      "type": "string",
+      "default": "default"
+    }
+  },
+  "required": ["projectName"]
+}

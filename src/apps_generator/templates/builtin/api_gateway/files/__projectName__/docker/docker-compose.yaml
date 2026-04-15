@@ -1,0 +1,20 @@
+version: "3.9"
+
+services:
+  gateway:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "{{ gatewayPort }}:{{ gatewayPort }}"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+{% if features.oauth2 %}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: {{ oidcIssuerUri }}
+{% endif %}
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge

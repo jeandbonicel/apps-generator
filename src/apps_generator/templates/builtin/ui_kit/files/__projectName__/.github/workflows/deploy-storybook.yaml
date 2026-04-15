@@ -1,0 +1,62 @@
+name: Deploy Storybook
+
+on:
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: {{ containerRegistry }}
+  IMAGE_NAME: {{ containerRegistry }}/{{ containerRegistryOrg }}/{{ projectName }}-storybook
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to container registry
+        uses: docker/login-action@v3
+        with:
+          registry: {{ containerRegistry }}
+          username: {% raw %}${{ github.actor }}{% endraw %}
+          password: {% raw %}${{ secrets.GITHUB_TOKEN }}{% endraw %}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: {% raw %}${{ env.IMAGE_NAME }}{% endraw %}
+          tags: |
+            type=sha
+            type=ref,event=branch
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: true
+          tags: {% raw %}${{ steps.meta.outputs.tags }}{% endraw %}
+          labels: {% raw %}${{ steps.meta.outputs.labels }}{% endraw %}
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "{% raw %}${{ secrets.KUBECONFIG }}{% endraw %}" | base64 -d > ~/.kube/config
+
+      - name: Set image tag
+        run: |
+          cd k8s/overlays/dev
+          kustomize edit set image {% raw %}${{ env.IMAGE_NAME }}=${{ env.IMAGE_NAME }}:sha-${{ github.sha }}{% endraw %}
+
+      - name: Deploy
+        run: |
+          kubectl apply -k k8s/overlays/dev
+          kubectl rollout status deployment/{{ projectName }}-storybook -n {{ k8sNamespace }} --timeout=300s

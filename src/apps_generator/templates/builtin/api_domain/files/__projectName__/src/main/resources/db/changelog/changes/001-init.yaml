@@ -1,0 +1,9 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-init
+      author: generator
+      comment: "Initial schema setup"
+      changes:
+        - sql:
+            sql: "SELECT 1"
+            comment: "Placeholder — replace with your initial schema"

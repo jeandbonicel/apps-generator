@@ -1,0 +1,3 @@
+docker: "features.docker"
+k8s: "features.kubernetes"
+.github: "features.cicd"

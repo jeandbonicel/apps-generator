@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "projectName": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Gateway name (kebab-case)"
+    },
+    "groupId": {
+      "type": "string",
+      "default": "com.example",
+      "description": "Maven/Gradle group ID"
+    },
+    "basePackage": {
+      "type": "string",
+      "default": "com.example",
+      "description": "Java base package"
+    },
+    "javaVersion": {
+      "type": "integer",
+      "default": 21,
+      "enum": [17, 21],
+      "description": "Java version"
+    },
+    "springBootVersion": {
+      "type": "string",
+      "default": "3.3.0",
+      "description": "Spring Boot version"
+    },
+    "springCloudVersion": {
+      "type": "string",
+      "default": "2023.0.2",
+      "description": "Spring Cloud version"
+    },
+    "gatewayPort": {
+      "type": "integer",
+      "default": 8080,
+      "description": "Gateway listening port"
+    },
+    "oidcIssuerUri": {
+      "type": "string",
+      "default": "https://auth.example.com/realms/main",
+      "description": "OIDC issuer URI for JWT validation"
+    },
+    "containerRegistry": {
+      "type": "string",
+      "default": "ghcr.io"
+    },
+    "containerRegistryOrg": {
+      "type": "string",
+      "default": "your-org"
+    },
+    "k8sNamespace": {
+      "type": "string",
+      "default": "default"
+    }
+  },
+  "required": ["projectName", "groupId", "basePackage"]
+}

@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: {{ nodeVersion }}
+{% if packageManager == "pnpm" %}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Build library
+        run: pnpm run build
+
+      - name: Build Storybook
+        run: pnpm run build-storybook
+{% elif packageManager == "yarn" %}
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Build library
+        run: yarn build
+
+      - name: Build Storybook
+        run: yarn build-storybook
+{% else %}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build library
+        run: npm run build
+
+      - name: Build Storybook
+        run: npm run build-storybook
+{% endif %}

@@ -1,0 +1,4 @@
+{
+  "title": "{{ projectTitle or projectName }}",
+  "welcome": "Bienvenue dans le micro-frontend {{ projectTitle or projectName }}."
+}

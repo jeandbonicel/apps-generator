@@ -1,0 +1,42 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: {{ projectName }}
+  profiles:
+    active: local
+{% if features.database %}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+{% endif %}
+{% if features.oauth2 %}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: {{ oidcIssuerUri }}
+{% endif %}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  level:
+    root: INFO
+    {{ basePackage }}: DEBUG
+  pattern:
+    console: "%d{ISO8601} [%thread] [%X{tenantId:-}] %-5level %logger{36} - %msg%n"

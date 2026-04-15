@@ -1,0 +1,37 @@
+server:
+  port: {{ gatewayPort }}
+
+spring:
+  application:
+    name: {{ projectName }}
+  cloud:
+    gateway:
+      routes: []
+  config:
+    import: optional:classpath:routes.yaml
+{% if features.oauth2 %}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: {{ oidcIssuerUri }}
+{% endif %}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    health:
+      show-details: when-authorized
+    gateway:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    {{ basePackage }}: DEBUG
+    org.springframework.cloud.gateway: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] [%X{tenantId:-}] %-5level %logger{36} - %msg%n"
