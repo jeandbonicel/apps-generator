@@ -34,4 +34,4 @@ logging:
     {{ basePackage }}: DEBUG
     org.springframework.cloud.gateway: DEBUG
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] [%X{tenantId:-}] %-5level %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] [%X{correlationId:-}] [%X{tenantId:-}] %-5level %logger{36} - %msg%n"

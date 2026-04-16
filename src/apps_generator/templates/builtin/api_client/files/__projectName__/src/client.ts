@@ -1,5 +1,16 @@
 import { ApiConfig, ApiError, RequestOptions } from "./types";
 
+function generateCorrelationId(): string {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for older browsers
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
 export function createApiClient(config: ApiConfig) {
   async function request<T = unknown>(
     method: string,
@@ -9,10 +20,12 @@ export function createApiClient(config: ApiConfig) {
   ): Promise<T> {
     const token = await config.getToken();
     const tenantId = config.getTenantId();
+    const correlationId = generateCorrelationId();
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       "Accept": "application/json",
+      "X-Correlation-ID": correlationId,
       ...options?.headers,
     };
 
@@ -39,17 +52,17 @@ export function createApiClient(config: ApiConfig) {
 
     if (response.status === 401) {
       config.onUnauthorized?.();
-      throw new ApiError(401, "Unauthorized");
+      throw new ApiError(401, "Unauthorized", correlationId);
     }
 
     if (response.status === 403) {
       config.onForbidden?.();
-      throw new ApiError(403, "Forbidden");
+      throw new ApiError(403, "Forbidden", correlationId);
     }
 
     if (!response.ok) {
       const text = await response.text().catch(() => "Unknown error");
-      throw new ApiError(response.status, text);
+      throw new ApiError(response.status, text, correlationId);
     }
 
     // Handle 204 No Content

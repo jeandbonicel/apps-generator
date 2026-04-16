@@ -39,4 +39,4 @@ logging:
     root: INFO
     {{ basePackage }}: DEBUG
   pattern:
-    console: "%d{ISO8601} [%thread] [%X{tenantId:-}] %-5level %logger{36} - %msg%n"
+    console: "%d{ISO8601} [%thread] [%X{correlationId:-}] [%X{tenantId:-}] %-5level %logger{36} - %msg%n"

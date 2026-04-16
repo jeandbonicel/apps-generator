@@ -7,6 +7,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import org.slf4j.MDC;
+
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -52,6 +54,10 @@ public class GlobalExceptionHandler {
         body.put("status", status.value());
         body.put("error", status.getReasonPhrase());
         body.put("message", message);
+        String correlationId = MDC.get("correlationId");
+        if (correlationId != null) {
+            body.put("correlationId", correlationId);
+        }
         if (fieldErrors != null) {
             body.put("fieldErrors", fieldErrors);
         }

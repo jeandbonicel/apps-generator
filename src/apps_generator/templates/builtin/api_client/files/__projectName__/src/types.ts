@@ -21,6 +21,7 @@ export class ApiError extends Error {
   constructor(
     public readonly status: number,
     public readonly body: string,
+    public readonly correlationId?: string,
   ) {
     super(`API Error ${status}: ${body}`);
     this.name = "ApiError";

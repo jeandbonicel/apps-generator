@@ -19,6 +19,7 @@ import java.io.IOException;
 public class WebConfig implements WebMvcConfigurer {
 
     public static final String TENANT_HEADER = "X-Tenant-ID";
+    public static final String CORRELATION_HEADER = "X-Correlation-ID";
 
     private final TenantFilterInterceptor tenantFilterInterceptor;
 
@@ -32,7 +33,7 @@ public class WebConfig implements WebMvcConfigurer {
             .allowedOriginPatterns("*")
             .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
             .allowedHeaders("*")
-            .exposedHeaders(TENANT_HEADER)
+            .exposedHeaders(TENANT_HEADER, CORRELATION_HEADER)
             .allowCredentials(true)
             .maxAge(3600);
     }
@@ -43,8 +44,8 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     /**
-     * Filter that extracts the X-Tenant-ID header and places it in the MDC
-     * for logging and downstream processing. Runs before the interceptor so
+     * Filter that extracts the X-Tenant-ID and X-Correlation-ID headers and
+     * places them in the MDC for logging. Runs before the interceptor so
      * TenantContext is available when the Hibernate filter is enabled.
      */
     @Bean
@@ -59,10 +60,15 @@ public class WebConfig implements WebMvcConfigurer {
                 if (tenantId != null && !tenantId.isBlank()) {
                     MDC.put("tenantId", tenantId);
                 }
+                String correlationId = request.getHeader(CORRELATION_HEADER);
+                if (correlationId != null && !correlationId.isBlank()) {
+                    MDC.put("correlationId", correlationId);
+                }
                 try {
                     filterChain.doFilter(request, response);
                 } finally {
                     MDC.remove("tenantId");
+                    MDC.remove("correlationId");
                 }
             }
         };

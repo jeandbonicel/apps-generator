@@ -285,6 +285,53 @@ def test_hibernate_tenant_filter_infra(tmp_path: Path):
     assert "addInterceptor" in web_config
 
 
+def test_correlation_id_in_backend(tmp_path: Path):
+    """Backend WebConfig picks up X-Correlation-ID and adds to MDC + logging pattern."""
+    template = resolve_template("api-domain")
+    result = generate(
+        template_dir=template.path,
+        output_dir=tmp_path / "corr",
+        cli_values={"projectName": "svc", "groupId": "com.test", "basePackage": "com.test.svc"},
+        interactive=False,
+    )
+    base = result / "svc"
+
+    web_config = (base / "src" / "main" / "java" / "com" / "test" / "svc" / "infrastructure" / "config" / "WebConfig.java").read_text()
+    assert "CORRELATION_HEADER" in web_config
+    assert "X-Correlation-ID" in web_config
+    assert 'MDC.put("correlationId"' in web_config
+    assert 'MDC.remove("correlationId")' in web_config
+
+    app_yaml = (base / "src" / "main" / "resources" / "application.yaml").read_text()
+    assert "%X{correlationId:-}" in app_yaml
+
+    handler = (base / "src" / "main" / "java" / "com" / "test" / "svc" / "infrastructure" / "web" / "GlobalExceptionHandler.java").read_text()
+    assert "correlationId" in handler
+
+
+def test_correlation_id_in_gateway(tmp_path: Path):
+    """Gateway generates correlation ID and forwards it downstream."""
+    template = resolve_template("api-gateway")
+    result = generate(
+        template_dir=template.path,
+        output_dir=tmp_path / "gw",
+        cli_values={"projectName": "gw", "groupId": "com.test", "basePackage": "com.test.gw"},
+        interactive=False,
+    )
+
+    filter_file = list((result / "gw").rglob("CorrelationIdFilter.java"))
+    assert len(filter_file) == 1
+
+    content = filter_file[0].read_text()
+    assert "X-Correlation-ID" in content
+    assert "UUID.randomUUID()" in content
+    assert 'enableFilter' not in content  # That's the tenant filter, not this one
+    assert 'MDC.put("correlationId"' in content
+
+    app_yaml = (result / "gw" / "src" / "main" / "resources" / "application.yaml").read_text()
+    assert "%X{correlationId:-}" in app_yaml
+
+
 def test_shared_infra_generated(tmp_path: Path):
     """TenantContext, GlobalExceptionHandler, NotFoundException are always generated."""
     template = resolve_template("api-domain")
