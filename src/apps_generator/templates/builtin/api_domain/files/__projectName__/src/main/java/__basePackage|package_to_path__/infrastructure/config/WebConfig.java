@@ -20,7 +20,7 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**")
+        registry.addMapping("/**")
             .allowedOriginPatterns("*")
             .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
             .allowedHeaders("*")
@@ -32,6 +32,9 @@ public class WebConfig implements WebMvcConfigurer {
     /**
      * Filter that extracts the X-Tenant-ID header and places it in the MDC
      * for logging and downstream processing.
+     * <p>
+     * The tenant ID is available via {@code TenantContext.getCurrentTenantId()}
+     * in services and repositories for tenant-scoped queries.
      */
     @Bean
     public OncePerRequestFilter tenantContextFilter() {

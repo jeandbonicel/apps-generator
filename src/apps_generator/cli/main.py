@@ -8,6 +8,7 @@ from apps_generator import __version__
 from apps_generator.cli.generate import generate
 from apps_generator.cli.docker_compose import docker_compose
 from apps_generator.cli.repo import repo_app
+from apps_generator.cli.sync import sync_app
 from apps_generator.cli.templates_cmd import templates_app
 
 app = typer.Typer(
@@ -21,6 +22,7 @@ app.command()(generate)
 app.command("docker-compose")(docker_compose)
 app.add_typer(templates_app, name="templates", help="Manage and inspect templates.")
 app.add_typer(repo_app, name="repo", help="Manage template repositories.")
+app.add_typer(sync_app, name="sync", help="Sync API types between backend and frontend.")
 
 
 def version_callback(value: bool) -> None:

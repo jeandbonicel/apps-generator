@@ -52,6 +52,11 @@
       "type": "string",
       "default": "https://auth.example.com/realms/main",
       "description": "OIDC issuer URI for resource server"
+    },
+    "resources": {
+      "type": "string",
+      "default": "[]",
+      "description": "JSON array of resource configs: [{\"name\":\"product\",\"fields\":[{\"name\":\"name\",\"type\":\"string\",\"required\":true}]}]"
     }
   },
   "required": ["projectName", "groupId", "basePackage"]
