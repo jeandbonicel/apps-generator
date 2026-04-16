@@ -140,7 +140,7 @@ def write_list_page(
 
     # Table wrapper
     if ui:
-        table_open = "      <Card>\n        <CardContent className=\"pt-6\">\n          <Table>\n            <TableHeader>\n              <TableRow>"
+        table_open = f"      <Card>\n        <CardHeader>\n          <CardTitle>{label} ({{data?.totalElements ?? 0}})</CardTitle>\n        </CardHeader>\n        <CardContent>\n          <Table>\n            <TableHeader>\n              <TableRow>"
         table_head_close = "              </TableRow>\n            </TableHeader>\n            <TableBody>"
         row_open = '              <TableRow key={p.id}>'
         row_close = "              </TableRow>"
@@ -178,11 +178,12 @@ def write_list_page(
         f"\n"
         f"  return (\n"
         f'    <div className="space-y-4">\n'
-        f'      <div className="flex items-center justify-between">\n'
-        f'        <h1 className="text-2xl font-bold tracking-tight">{label} ({{data?.totalElements ?? 0}})</h1>\n'
-        f"      </div>\n"
-        f"{table_open}\n"
-        f"{headers}\n"
+        + (f"{table_open}\n" if ui else
+           f'      <div className="flex items-center justify-between">\n'
+           f'        <h1 className="text-2xl font-bold tracking-tight">{label} ({{data?.totalElements ?? 0}})</h1>\n'
+           f"      </div>\n"
+           f"{table_open}\n")
+        + f"{headers}\n"
         f"{table_head_close}\n"
         f"          {{items.map((p) => (\n"
         f"{row_open}\n"
