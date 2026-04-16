@@ -122,8 +122,8 @@ def test_shell_linking_registers_frontend(tmp_path: Path):
     )
 
     # Manually call the registration (simulates --shell flag)
-    from apps_generator.cli.generate import _register_in_shell
-    _register_in_shell(
+    from apps_generator.cli.generators.shell import register_in_shell
+    register_in_shell(
         shell_path=shell_dir,
         app_name="orders",
         dev_port="5001",
@@ -145,7 +145,7 @@ def test_shell_linking_registers_frontend(tmp_path: Path):
         cli_values={"projectName": "users", "devPort": "5002"},
         interactive=False,
     )
-    _register_in_shell(
+    register_in_shell(
         shell_path=shell_dir,
         app_name="users",
         dev_port="5002",
@@ -170,9 +170,9 @@ def test_shell_linking_no_duplicates(tmp_path: Path):
         interactive=False,
     )
 
-    from apps_generator.cli.generate import _register_in_shell
-    _register_in_shell(shell_path=shell_dir, app_name="orders", dev_port="5001", menu_label="Orders")
-    _register_in_shell(shell_path=shell_dir, app_name="orders", dev_port="5001", menu_label="Orders")
+    from apps_generator.cli.generators.shell import register_in_shell
+    register_in_shell(shell_path=shell_dir, app_name="orders", dev_port="5001", menu_label="Orders")
+    register_in_shell(shell_path=shell_dir, app_name="orders", dev_port="5001", menu_label="Orders")
 
     import json
     remotes_file = shell_dir / "my-shell" / "public" / "remotes.json"
@@ -205,14 +205,15 @@ def test_shell_linking_with_pages(tmp_path: Path):
         interactive=False,
     )
 
-    from apps_generator.cli.generate import _register_in_shell, _parse_pages, _generate_page_components, _find_project_root
+    from apps_generator.cli.generators.pages import parse_pages, find_project_root, generate_page_components
+    from apps_generator.cli.generators.shell import register_in_shell
 
-    pages = _parse_pages('[{"path":"overview","label":"Overview"},{"path":"list","label":"Order List"}]')
-    project_root = _find_project_root(fe_dir, "orders")
+    pages = parse_pages('[{"path":"overview","label":"Overview"},{"path":"list","label":"Order List"}]')
+    project_root = find_project_root(fe_dir, "orders")
     assert project_root is not None
-    _generate_page_components(project_root, pages, "orders")
+    generate_page_components(project_root, pages, "orders")
 
-    _register_in_shell(
+    register_in_shell(
         shell_path=shell_dir,
         app_name="orders",
         dev_port="5001",
@@ -319,11 +320,11 @@ def test_uikit_linking(tmp_path: Path):
         interactive=False,
     )
 
-    from apps_generator.cli.generate import _register_uikit, _find_consumer_root
-    consumer_root = _find_consumer_root(shell_dir, "my-shell")
+    from apps_generator.cli.generators.linking import register_uikit, find_consumer_root
+    consumer_root = find_consumer_root(shell_dir, "my-shell")
     assert consumer_root is not None
 
-    _register_uikit(uikit_path=uikit_dir, consumer_root=consumer_root)
+    register_uikit(uikit_path=uikit_dir, consumer_root=consumer_root)
 
     import json
     pkg = json.loads((consumer_root / "package.json").read_text())

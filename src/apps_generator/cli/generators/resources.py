@@ -1,4 +1,4 @@
-"""Resource CRUD scaffolding — generates Java entities, services, controllers, DTOs, and migrations."""
+"""Resource CRUD scaffolding — generates Java entities, services, controllers, DTOs."""
 
 from __future__ import annotations
 
@@ -6,10 +6,10 @@ import json
 from pathlib import Path
 
 from apps_generator.utils.console import console
-from apps_generator.utils.naming import pascal_case, snake_case, camel_case, title_case
+from apps_generator.utils.naming import pascal_case, snake_case, camel_case
 
 
-# ── Field type mappings ──────────────────────────────────────────────────────
+# -- Field type mappings ------------------------------------------------------
 
 JAVA_TYPES = {
     "string": "String",
@@ -51,7 +51,7 @@ JAVA_IMPORTS = {
 }
 
 
-# ── Parsing ──────────────────────────────────────────────────────────────────
+# -- Parsing ------------------------------------------------------------------
 
 def parse_resources(resources_str: str) -> list[dict]:
     """Parse resources JSON string into a list of resource configs."""
@@ -64,7 +64,7 @@ def parse_resources(resources_str: str) -> list[dict]:
         return []
 
 
-# ── Java code generation ─────────────────────────────────────────────────────
+# -- Java code generation -----------------------------------------------------
 
 def generate_resource_scaffolding(
     java_root: Path,
@@ -74,6 +74,8 @@ def generate_resource_scaffolding(
     project_name: str,
 ) -> None:
     """Generate Java CRUD files for each resource."""
+    from apps_generator.cli.generators.migrations import generate_migration
+
     for idx, resource in enumerate(resources):
         name = resource.get("name", "")
         fields = resource.get("fields", [])
@@ -93,7 +95,7 @@ def generate_resource_scaffolding(
         _gen_create_request(java_root, base_package, entity_name, fields)
         _gen_update_request(java_root, base_package, entity_name, fields)
         _gen_response_dto(java_root, base_package, entity_name, fields)
-        _gen_migration(res_root, entity_name, table_name, fields, migration_seq, name)
+        generate_migration(res_root, entity_name, table_name, fields, migration_seq, name)
 
 
 def _collect_imports(fields: list[dict]) -> list[str]:
@@ -591,209 +593,3 @@ def _gen_controller(java_root: Path, pkg: str, entity: str, name: str, fields: l
         f"}}\n"
     )
     console.print(f"    Created: interfaces/rest/{entity}Controller.java")
-
-
-def _gen_migration(res_root: Path, entity: str, table: str, fields: list[dict], seq: int, name: str) -> None:
-    """Generate Liquibase migration YAML."""
-    changes_dir = res_root / "db" / "changelog" / "changes"
-    changes_dir.mkdir(parents=True, exist_ok=True)
-
-    migration_file = changes_dir / f"{seq:03d}-create-{name}.yaml"
-    if migration_file.exists():
-        return
-
-    columns = [
-        {"name": "id", "type": "BIGINT", "autoIncrement": True, "pk": True},
-        {"name": "tenant_id", "type": "VARCHAR(255)", "nullable": False},
-    ]
-
-    for f in fields:
-        ft = f.get("type", "string")
-        sql_type = SQL_TYPES.get(ft, "VARCHAR(255)")
-        if ft == "string":
-            max_len = f.get("maxLength", 255)
-            sql_type = f"VARCHAR({max_len})"
-        col: dict = {"name": snake_case(f["name"]), "type": sql_type}
-        if f.get("required"):
-            col["nullable"] = False
-        columns.append(col)
-
-    columns.append({"name": "created_at", "type": "TIMESTAMP", "nullable": False})
-    columns.append({"name": "updated_at", "type": "TIMESTAMP", "nullable": False})
-
-    # Build YAML
-    col_entries = []
-    for c in columns:
-        constraints = {}
-        if c.get("pk"):
-            constraints["primaryKey"] = True
-        if c.get("nullable") is False and not c.get("pk"):
-            constraints["nullable"] = False
-
-        entry: dict = {"name": c["name"], "type": c["type"]}
-        if c.get("autoIncrement"):
-            entry["autoIncrement"] = True
-        if constraints:
-            entry["constraints"] = constraints
-        col_entries.append({"column": entry})
-
-    changeset: dict = {
-        "id": f"{seq:03d}-create-{name}",
-        "author": "generator",
-        "changes": [
-            {"createTable": {"tableName": table, "columns": col_entries}},
-            {"createIndex": {
-                "tableName": table,
-                "indexName": f"idx_{table}_tenant_id",
-                "columns": [{"column": {"name": "tenant_id"}}],
-            }},
-        ],
-    }
-
-    # Add unique constraints
-    for f in fields:
-        if f.get("unique"):
-            changeset["changes"].append({
-                "addUniqueConstraint": {
-                    "tableName": table,
-                    "columnNames": snake_case(f["name"]),
-                    "constraintName": f"uq_{table}_{snake_case(f['name'])}",
-                }
-            })
-
-    import yaml
-    migration_file.write_text(yaml.dump(
-        {"databaseChangeLog": [{"changeSet": changeset}]},
-        default_flow_style=False,
-        sort_keys=False,
-    ))
-
-    # Update master changelog
-    master = res_root / "db" / "changelog" / "db.changelog-master.yaml"
-    if master.exists():
-        with open(master) as mf:
-            master_data = yaml.safe_load(mf) or {}
-        changelog = master_data.get("databaseChangeLog", [])
-        include_path = f"db/changelog/changes/{seq:03d}-create-{name}.yaml"
-        if not any(e.get("include", {}).get("file") == include_path for e in changelog):
-            changelog.append({"include": {"file": include_path}})
-            master_data["databaseChangeLog"] = changelog
-            with open(master, "w") as mf:
-                yaml.dump(master_data, mf, default_flow_style=False, sort_keys=False)
-
-    console.print(f"    Created: db/changelog/changes/{seq:03d}-create-{name}.yaml")
-
-
-# ── TypeScript type generation ───────────────────────────────────────────────
-
-def generate_resource_types(api_client_src: Path, resources: list[dict]) -> None:
-    """Generate TypeScript interfaces in the api-client package."""
-    resources_dir = api_client_src / "resources"
-    resources_dir.mkdir(parents=True, exist_ok=True)
-
-    exports = []
-
-    for resource in resources:
-        name = resource.get("name", "")
-        fields = resource.get("fields", [])
-        if not name:
-            continue
-
-        entity = pascal_case(name)
-        filename = f"{name}.ts"
-        exports.append(name)
-
-        # Build interface fields
-        response_fields = ["  id: number;", "  tenantId: string;"]
-        create_fields = []
-        for f in fields:
-            ts_type = TS_TYPES.get(f.get("type", "string"), "string")
-            fname = camel_case(f["name"])
-            required = f.get("required", False)
-            if required:
-                response_fields.append(f"  {fname}: {ts_type};")
-                create_fields.append(f"  {fname}: {ts_type};")
-            else:
-                response_fields.append(f"  {fname}: {ts_type} | null;")
-                create_fields.append(f"  {fname}?: {ts_type};")
-        response_fields.extend(["  createdAt: string;", "  updatedAt: string;"])
-
-        ts_content = (
-            f"// Types generated from resource schema — DO NOT EDIT\n"
-            f"\n"
-            f"export interface {entity} {{\n"
-            f"{''.join(chr(10) + rf for rf in response_fields)}\n"
-            f"}}\n"
-            f"\n"
-            f"export interface Create{entity}Request {{\n"
-            f"{''.join(chr(10) + cf for cf in create_fields)}\n"
-            f"}}\n"
-            f"\n"
-            f"export interface Update{entity}Request {{\n"
-            f"{''.join(chr(10) + cf for cf in create_fields)}\n"
-            f"}}\n"
-            f"\n"
-            f"export interface PageResponse<T> {{\n"
-            f"  content: T[];\n"
-            f"  totalElements: number;\n"
-            f"  totalPages: number;\n"
-            f"  number: number;\n"
-            f"  size: number;\n"
-            f"}}\n"
-        )
-
-        (resources_dir / filename).write_text(ts_content)
-        console.print(f"    Created: src/resources/{filename}")
-
-    # Barrel export
-    barrel = "\n".join(f'export * from "./{name}";' for name in exports)
-    (resources_dir / "index.ts").write_text(barrel + "\n")
-
-    # Update main index.ts to re-export resources
-    main_index = api_client_src / "index.ts"
-    if main_index.exists():
-        content = main_index.read_text()
-        export_line = 'export * from "./resources";'
-        if export_line not in content:
-            with open(main_index, "a") as f:
-                f.write(f"\n{export_line}\n")
-            console.print(f"    Updated: src/index.ts (added resources export)")
-
-    console.print(f"[green]Generated TypeScript types for {len(exports)} resource(s)[/green]")
-
-
-# ── Path helpers ─────────────────────────────────────────────────────────────
-
-def find_java_root(output_dir: Path, project_name: str, base_package: str) -> Path | None:
-    """Find the Java source root for a generated api-domain project."""
-    from apps_generator.utils.naming import package_to_path
-    pkg_path = package_to_path(base_package)
-    candidates = [
-        output_dir / project_name / "src" / "main" / "java" / pkg_path,
-        output_dir / "src" / "main" / "java" / pkg_path,
-    ]
-    for c in candidates:
-        if c.exists():
-            return c
-    return None
-
-
-def find_resources_root(output_dir: Path, project_name: str) -> Path | None:
-    """Find the resources root for a generated api-domain project."""
-    candidates = [
-        output_dir / project_name / "src" / "main" / "resources",
-        output_dir / "src" / "main" / "resources",
-    ]
-    for c in candidates:
-        if c.exists():
-            return c
-    return None
-
-
-def find_api_client_src(api_client_path: Path) -> Path | None:
-    """Find the src/ directory in an api-client project."""
-    api_client_path = api_client_path.resolve()
-    for child in [api_client_path] + list(api_client_path.iterdir()):
-        if child.is_dir() and (child / "src").is_dir():
-            return child / "src"
-    return None
