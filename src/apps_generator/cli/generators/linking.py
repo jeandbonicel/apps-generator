@@ -107,6 +107,7 @@ export default {{
   content: [
     "./index.html",
     "./src/**/*.{{ts,tsx}}",
+    "./local-deps/{uikit_name}/dist/**/*.js",
     "./local-deps/{uikit_name}/src/**/*.{{ts,tsx}}",
   ],
   theme: {{
