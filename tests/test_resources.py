@@ -332,6 +332,64 @@ def test_correlation_id_in_gateway(tmp_path: Path):
     assert "%X{correlationId:-}" in app_yaml
 
 
+def test_resource_generates_integration_test(tmp_path: Path):
+    """Each resource gets a Testcontainers integration test with CRUD + tenant isolation."""
+    _, java_root, _ = _generate_with_resource(tmp_path, json.dumps([{
+        "name": "product",
+        "fields": [
+            {"name": "name", "type": "string", "required": True},
+            {"name": "price", "type": "decimal", "required": True},
+        ]
+    }]))
+
+    # Test root mirrors java root: src/main/java → src/test/java
+    test_root = Path(str(java_root).replace("/main/java/", "/test/java/"))
+    test_file = test_root / "ProductIntegrationTest.java"
+    assert test_file.exists()
+    content = test_file.read_text()
+
+    # CRUD lifecycle test
+    assert "crud_lifecycle" in content
+    assert "post(\"/product\")" in content
+    assert "get(\"/product/\"" in content
+    assert "put(\"/product/\"" in content
+    assert "delete(\"/product/\"" in content
+    assert "status().isCreated()" in content
+    assert "status().isNoContent()" in content
+    assert "status().isNotFound()" in content
+
+    # Tenant isolation test
+    assert "TENANT_A" in content
+    assert "TENANT_B" in content
+    assert "wrongTenant_returns404" in content
+    assert "totalElements" in content
+
+    # Validation test (name is required)
+    assert "MissingRequiredField" in content or "returns400" in content
+
+    # Properly escaped JSON
+    assert '\\"name\\"' in content
+    assert '\\"price\\"' in content
+
+
+def test_resource_generates_abstract_test_base(tmp_path: Path):
+    """AbstractIntegrationTest with Testcontainers is generated."""
+    template = resolve_template("api-domain")
+    result = generate(
+        template_dir=template.path,
+        output_dir=tmp_path / "base",
+        cli_values={"projectName": "svc", "groupId": "com.test", "basePackage": "com.test.svc"},
+        interactive=False,
+    )
+    base = result / "svc" / "src" / "test" / "java" / "com" / "test" / "svc" / "AbstractIntegrationTest.java"
+    assert base.exists()
+    content = base.read_text()
+    assert "PostgreSQLContainer" in content
+    assert "@Testcontainers" in content
+    assert "MockMvc" in content
+    assert "@DynamicPropertySource" in content
+
+
 def test_shared_infra_generated(tmp_path: Path):
     """TenantContext, GlobalExceptionHandler, NotFoundException are always generated."""
     template = resolve_template("api-domain")

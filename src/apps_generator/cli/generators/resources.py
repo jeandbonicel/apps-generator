@@ -97,6 +97,11 @@ def generate_resource_scaffolding(
         _gen_response_dto(java_root, base_package, entity_name, fields)
         generate_migration(res_root, entity_name, table_name, fields, migration_seq, name)
 
+        # Integration test (test root mirrors java root: src/main/java → src/test/java)
+        test_root = Path(str(java_root).replace("/main/java/", "/test/java/"))
+        if test_root.parent.exists():
+            _gen_integration_test(test_root, base_package, entity_name, name, fields)
+
 
 def _collect_imports(fields: list[dict]) -> list[str]:
     """Collect extra Java imports needed for field types."""
@@ -570,3 +575,159 @@ def _gen_controller(java_root: Path, pkg: str, entity: str, name: str, fields: l
         f"}}\n"
     )
     console.print(f"    Created: interfaces/rest/{entity}Controller.java")
+
+
+def _gen_integration_test(test_root: Path, pkg: str, entity: str, name: str, fields: list[dict]) -> None:
+    """Generate an integration test for the resource CRUD endpoints."""
+    dest = test_root / f"{entity}IntegrationTest.java"
+    if dest.exists():
+        return
+    dest.parent.mkdir(parents=True, exist_ok=True)
+
+    # Build a sample JSON body from fields for POST (escaped for Java string literals)
+    json_fields = []
+    for f in fields:
+        ft = f.get("type", "string")
+        fname = camel_case(f["name"])
+        if ft in ("string", "text"):
+            json_fields.append(f'\\"{fname}\\": \\"test-value\\"')
+        elif ft in ("integer", "long"):
+            json_fields.append(f'\\"{fname}\\": 1')
+        elif ft == "decimal":
+            json_fields.append(f'\\"{fname}\\": 9.99')
+        elif ft == "boolean":
+            json_fields.append(f'\\"{fname}\\": true')
+        elif ft == "date":
+            json_fields.append(f'\\"{fname}\\": \\"2025-01-15\\"')
+        elif ft == "datetime":
+            json_fields.append(f'\\"{fname}\\": \\"2025-01-15T10:00:00\\"')
+    json_body = "{ " + ", ".join(json_fields) + " }"
+
+    # Find a required string field for update test
+    update_field = None
+    for f in fields:
+        if f.get("required") and f.get("type") in ("string", "text"):
+            update_field = f
+            break
+
+    update_assertion = ""
+    update_json = json_body
+    if update_field:
+        uf = camel_case(update_field["name"])
+        update_json = json_body.replace('\\"test-value\\"', '\\"updated-value\\"', 1)
+        update_assertion = f'\n            .andExpect(jsonPath("$.{uf}").value("updated-value"));'
+    else:
+        update_assertion = ";"
+
+    # Find a required field name for validation test
+    required_field = None
+    for f in fields:
+        if f.get("required"):
+            required_field = f
+            break
+    validation_test = ""
+    if required_field:
+        # Build JSON with required field missing
+        missing_fields = [jf for jf in json_fields if camel_case(required_field["name"]) not in jf]
+        missing_json = "{ " + ", ".join(missing_fields) + " }" if missing_fields else "{}"
+        validation_test = f"""
+
+    @Test
+    void create_withMissingRequiredField_returns400() throws Exception {{
+        mockMvc.perform(post("/{name}")
+                .header("X-Tenant-ID", TENANT_A)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{missing_json}"))
+            .andExpect(status().isBadRequest());
+    }}"""
+
+    dest.write_text(
+        f"package {pkg};\n"
+        f"\n"
+        f"import org.junit.jupiter.api.Test;\n"
+        f"import org.springframework.http.MediaType;\n"
+        f"\n"
+        f"import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;\n"
+        f"import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;\n"
+        f"\n"
+        f"/**\n"
+        f" * Integration tests for /{name} CRUD endpoints.\n"
+        f" * Uses a real PostgreSQL via Testcontainers (see AbstractIntegrationTest).\n"
+        f" */\n"
+        f"class {entity}IntegrationTest extends AbstractIntegrationTest {{\n"
+        f"\n"
+        f"    private static final String TENANT_A = \"tenant-a\";\n"
+        f"    private static final String TENANT_B = \"tenant-b\";\n"
+        f"\n"
+        f"    @Test\n"
+        f"    void crud_lifecycle() throws Exception {{\n"
+        f"        // CREATE\n"
+        f"        String response = mockMvc.perform(post(\"/{name}\")\n"
+        f"                .header(\"X-Tenant-ID\", TENANT_A)\n"
+        f"                .contentType(MediaType.APPLICATION_JSON)\n"
+        f"                .content(\"{json_body}\"))\n"
+        f"            .andExpect(status().isCreated())\n"
+        f"            .andExpect(jsonPath(\"$.id\").isNumber())\n"
+        f"            .andExpect(jsonPath(\"$.tenantId\").value(TENANT_A))\n"
+        f"            .andReturn().getResponse().getContentAsString();\n"
+        f"\n"
+        f"        // Extract ID from response\n"
+        f"        long id = com.jayway.jsonpath.JsonPath.parse(response).read(\"$.id\", Long.class);\n"
+        f"\n"
+        f"        // READ\n"
+        f"        mockMvc.perform(get(\"/{name}/\" + id)\n"
+        f"                .header(\"X-Tenant-ID\", TENANT_A))\n"
+        f"            .andExpect(status().isOk())\n"
+        f"            .andExpect(jsonPath(\"$.id\").value(id));\n"
+        f"\n"
+        f"        // LIST — tenant A should see 1 item\n"
+        f"        mockMvc.perform(get(\"/{name}\")\n"
+        f"                .header(\"X-Tenant-ID\", TENANT_A))\n"
+        f"            .andExpect(status().isOk())\n"
+        f"            .andExpect(jsonPath(\"$.totalElements\").value(1));\n"
+        f"\n"
+        f"        // LIST — tenant B should see 0 items (isolation)\n"
+        f"        mockMvc.perform(get(\"/{name}\")\n"
+        f"                .header(\"X-Tenant-ID\", TENANT_B))\n"
+        f"            .andExpect(status().isOk())\n"
+        f"            .andExpect(jsonPath(\"$.totalElements\").value(0));\n"
+        f"\n"
+        f"        // UPDATE\n"
+        f"        mockMvc.perform(put(\"/{name}/\" + id)\n"
+        f"                .header(\"X-Tenant-ID\", TENANT_A)\n"
+        f"                .contentType(MediaType.APPLICATION_JSON)\n"
+        f"                .content(\"{update_json}\"))\n"
+        f"            .andExpect(status().isOk()){update_assertion}\n"
+        f"\n"
+        f"        // DELETE\n"
+        f"        mockMvc.perform(delete(\"/{name}/\" + id)\n"
+        f"                .header(\"X-Tenant-ID\", TENANT_A))\n"
+        f"            .andExpect(status().isNoContent());\n"
+        f"\n"
+        f"        // READ after delete — 404\n"
+        f"        mockMvc.perform(get(\"/{name}/\" + id)\n"
+        f"                .header(\"X-Tenant-ID\", TENANT_A))\n"
+        f"            .andExpect(status().isNotFound());\n"
+        f"    }}\n"
+        f"\n"
+        f"    @Test\n"
+        f"    void getById_wrongTenant_returns404() throws Exception {{\n"
+        f"        // Create as tenant A\n"
+        f"        String response = mockMvc.perform(post(\"/{name}\")\n"
+        f"                .header(\"X-Tenant-ID\", TENANT_A)\n"
+        f"                .contentType(MediaType.APPLICATION_JSON)\n"
+        f"                .content(\"{json_body}\"))\n"
+        f"            .andExpect(status().isCreated())\n"
+        f"            .andReturn().getResponse().getContentAsString();\n"
+        f"\n"
+        f"        long id = com.jayway.jsonpath.JsonPath.parse(response).read(\"$.id\", Long.class);\n"
+        f"\n"
+        f"        // Try to read as tenant B — should not find it\n"
+        f"        mockMvc.perform(get(\"/{name}/\" + id)\n"
+        f"                .header(\"X-Tenant-ID\", TENANT_B))\n"
+        f"            .andExpect(status().isNotFound());\n"
+        f"    }}"
+        f"{validation_test}\n"
+        f"}}\n"
+    )
+    console.print(f"    Created: test/{entity}IntegrationTest.java")

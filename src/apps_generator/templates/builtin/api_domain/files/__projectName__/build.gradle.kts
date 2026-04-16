@@ -38,6 +38,12 @@ dependencies {
 {% endif %}
     // Testing
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+{% if features.database %}
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")
+    testImplementation("org.testcontainers:postgresql")
+    testImplementation("org.testcontainers:junit-jupiter")
+    testImplementation("com.jayway.jsonpath:json-path")
+{% endif %}
 {% if features.oauth2 %}
     testImplementation("org.springframework.security:spring-security-test")
 {% endif %}

@@ -1,0 +1,14 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+{% if features.database %}
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+{% endif %}
+
+logging:
+  level:
+    root: WARN
+    {{ basePackage }}: DEBUG
