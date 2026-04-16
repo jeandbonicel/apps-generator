@@ -102,6 +102,34 @@ def test_gateway_no_security_config_without_oauth2(tmp_path: Path):
     assert len(security_files) == 0
 
 
+def test_gateway_has_security_headers_filter(tmp_path: Path):
+    """Gateway generates a SecurityHeadersFilter that adds OWASP headers."""
+    gw_dir = _setup_gateway(tmp_path)
+    filters = list((gw_dir / "my-gateway").rglob("SecurityHeadersFilter.java"))
+    assert len(filters) == 1
+    content = filters[0].read_text()
+    assert "X-Content-Type-Options" in content
+    assert "X-Frame-Options" in content
+    assert "nosniff" in content
+
+
+def test_shell_nginx_has_security_headers(tmp_path: Path):
+    """Shell nginx config includes security headers."""
+    template = resolve_template("platform-shell")
+    result = generate(
+        template_dir=template.path,
+        output_dir=tmp_path / "sh",
+        cli_values={"projectName": "my-shell"},
+        interactive=False,
+    )
+    nginx = (result / "my-shell" / "docker" / "nginx.conf").read_text()
+    assert "X-Frame-Options" in nginx
+    assert "X-Content-Type-Options" in nginx
+    assert "Content-Security-Policy" in nginx
+    assert "Referrer-Policy" in nginx
+    assert "frame-ancestors 'none'" in nginx
+
+
 # ── API client linking ───────────────────────────────────────────────────────
 
 def _setup_api_client(tmp_path: Path) -> Path:
