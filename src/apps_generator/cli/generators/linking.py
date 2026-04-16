@@ -156,7 +156,7 @@ export default {{
   }},
   safelist: [
     // ui-kit component classes that must be available in consumer builds
-    "p-4", "px-4", "py-2", "p-6", "h-12", "h-10", "h-6", "w-11",
+    "p-4", "px-4", "py-2", "py-4", "p-6", "h-12", "h-10", "h-6", "w-11",
     "gap-4", "gap-2", "space-y-2", "space-y-4",
     "text-left", "text-sm", "text-xs", "font-medium", "font-semibold",
     "align-middle", "caption-bottom", "tabular-nums",
