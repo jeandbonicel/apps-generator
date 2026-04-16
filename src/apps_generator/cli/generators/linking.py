@@ -154,6 +154,20 @@ export default {{
       }},
     }},
   }},
+  safelist: [
+    // ui-kit component classes that must be available in consumer builds
+    "p-4", "px-4", "py-2", "p-6", "h-12", "h-10", "h-6", "w-11",
+    "gap-4", "gap-2", "space-y-2", "space-y-4",
+    "text-left", "text-sm", "text-xs", "font-medium", "font-semibold",
+    "align-middle", "caption-bottom", "tabular-nums",
+    "rounded-full", "rounded-md", "rounded-sm", "rounded-lg",
+    "border-b", "border-t", "shrink-0", "overflow-hidden",
+    "animate-pulse", "translate-x-5", "translate-x-0",
+    "bg-primary", "bg-muted", "bg-secondary", "bg-background", "bg-destructive",
+    "text-primary-foreground", "text-muted-foreground", "text-destructive-foreground",
+    "hover:bg-primary/90", "hover:bg-muted/50", "hover:bg-accent",
+    "disabled:pointer-events-none", "disabled:opacity-50",
+  ],
   plugins: [],
 }};
 '''
