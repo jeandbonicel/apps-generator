@@ -132,6 +132,15 @@ def generate(
         source=template_info.source,
     )
 
+    # Resolve uikit name early (needed by page generator)
+    _uikit_pkg_name = ""
+    if uikit is not None:
+        from apps_generator.cli.generators.linking import find_uikit_package_json
+        import json as _json
+        _uikit_pkg_path = find_uikit_package_json(uikit)
+        if _uikit_pkg_path:
+            _uikit_pkg_name = _json.load(open(_uikit_pkg_path)).get("name", "")
+
     # Post-generation: create page components and update pages.ts if pages were specified
     if template_info.name == "frontend-app" and not dry_run:
         project_name = cli_values.get("projectName") or file_values.get("projectName", "")
@@ -141,7 +150,7 @@ def generate(
         if pages:
             project_root = find_project_root(result, project_name)
             if project_root:
-                generate_page_components(project_root, pages, project_name)
+                generate_page_components(project_root, pages, project_name, uikit_name=_uikit_pkg_name)
 
     # Post-generation: create CRUD resources for api-domain
     if template_info.name == "api-domain" and not dry_run:

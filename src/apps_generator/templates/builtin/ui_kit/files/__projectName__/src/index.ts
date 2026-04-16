@@ -20,6 +20,19 @@ export {
 export { Tabs, TabsList, TabsTrigger, TabsContent } from "./components/ui/tabs";
 export { Toast, ToastTitle, ToastDescription, toastVariants } from "./components/ui/toast";
 export { Toaster, useToast } from "./components/ui/toaster";
+export { Checkbox } from "./components/ui/checkbox";
+export { Textarea } from "./components/ui/textarea";
+export { Separator } from "./components/ui/separator";
+export { Skeleton } from "./components/ui/skeleton";
+export { Progress } from "./components/ui/progress";
+export { Avatar, AvatarImage, AvatarFallback } from "./components/ui/avatar";
+export { Switch } from "./components/ui/switch";
+export { ScrollArea } from "./components/ui/scroll-area";
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "./components/ui/tooltip";
+export {
+  ChartContainer, ChartTooltip, ChartTooltipContent,
+  ChartLegend, ChartLegendContent, type ChartConfig,
+} from "./components/ui/chart";
 
 // Layout
 export { Page } from "./components/layout/Page";

@@ -34,12 +34,15 @@ def find_project_root(output_dir: Path, project_name: str) -> Path | None:
     return None
 
 
-def generate_page_components(project_root: Path, pages: list[dict], project_name: str) -> None:
+def generate_page_components(project_root: Path, pages: list[dict], project_name: str, uikit_name: str = "") -> None:
     """Generate individual page component files and update pages.ts registry.
 
     Pages with ``resource`` + ``type`` fields generate data-fetching components
     using useApiClient() and TanStack Query (list page with table, form page
     with inputs). Pages without these fields stay as simple placeholders.
+
+    When ``uikit_name`` is provided, generated pages import shadcn components
+    (Button, Input, Table, Card, etc.) from the ui-kit package.
     """
     routes_dir = project_root / "src" / "routes"
     routes_dir.mkdir(parents=True, exist_ok=True)
@@ -59,9 +62,9 @@ def generate_page_components(project_root: Path, pages: list[dict], project_name
         page_file = routes_dir / f"{component_name}.tsx"
         if not page_file.exists():
             if resource and page_type == "list":
-                write_list_page(page_file, component_name, label, resource, fields)
+                write_list_page(page_file, component_name, label, resource, fields, uikit_name)
             elif resource and page_type == "form":
-                write_form_page(page_file, component_name, label, resource, fields)
+                write_form_page(page_file, component_name, label, resource, fields, uikit_name)
             else:
                 page_file.write_text(
                     f'export function {component_name}() {{\n'
@@ -89,38 +92,74 @@ def generate_page_components(project_root: Path, pages: list[dict], project_name
 
 
 def write_list_page(
-    dest: Path, component: str, label: str, resource: str, fields: list[dict],
+    dest: Path, component: str, label: str, resource: str, fields: list[dict], uikit_name: str = "",
 ) -> None:
     """Generate a list page with useApiClient + useQuery table."""
-    from apps_generator.cli.generators.resources import TS_TYPES
     entity = pascal_case(resource)
+    ui = uikit_name  # shorthand
 
-    # Table columns
+    # ui-kit imports
+    if ui:
+        ui_import = (
+            f'import {{ Button, Card, CardContent, CardHeader, CardTitle, '
+            f'Table, TableHeader, TableBody, TableHead, TableRow, TableCell }} from "{ui}";\n'
+        )
+    else:
+        ui_import = ""
+
+    # Table headers
+    if ui:
+        headers = "\n".join(
+            f'              <TableHead>{title_case(f["name"])}</TableHead>'
+            for f in fields
+        )
+    else:
+        headers = "\n".join(
+            f'              <th className="p-2 text-left">{title_case(f["name"])}</th>'
+            for f in fields
+        )
+
+    # Table cells
     cols = []
     for f in fields:
         fname = camel_case(f["name"])
-        flabel = title_case(f["name"])
         ft = f.get("type", "string")
+        tag = "TableCell" if ui else 'td className="p-2"'
+        close_tag = "TableCell" if ui else "td"
         if ft == "decimal":
-            cols.append(f'              <td className="p-2">${{p.{fname}.toFixed(2)}}</td>')
-        elif ft in ("integer", "long"):
-            cols.append(f'              <td className="p-2">{{p.{fname}}}</td>')
+            cols.append(f'              <{tag}>${{p.{fname}.toFixed(2)}}</{close_tag}>')
         elif ft == "boolean":
-            cols.append(f'              <td className="p-2">{{p.{fname} ? "Yes" : "No"}}</td>')
+            cols.append(f'              <{tag}>{{p.{fname} ? "Yes" : "No"}}</{close_tag}>')
         else:
-            cols.append(f'              <td className="p-2">{{p.{fname}}}</td>')
-
-    headers = "\n".join(
-        f'              <th className="p-2 text-left">{title_case(f["name"])}</th>'
-        for f in fields
-    )
+            cols.append(f'              <{tag}>{{p.{fname}}}</{close_tag}>')
     cells = "\n".join(cols)
+
+    # Button element
+    btn_prev = f'<Button variant="outline" size="sm" onClick={{() => setPage(p => p - 1)}} disabled={{page === 0}}>Previous</Button>' if ui else '<button className="px-3 py-1 border rounded text-sm disabled:opacity-50" onClick={() => setPage(p => p - 1)} disabled={page === 0}>Previous</button>'
+    btn_next = f'<Button variant="outline" size="sm" onClick={{() => setPage(p => p + 1)}} disabled={{page >= totalPages - 1}}>Next</Button>' if ui else '<button className="px-3 py-1 border rounded text-sm disabled:opacity-50" onClick={() => setPage(p => p + 1)} disabled={page >= totalPages - 1}>Next</button>'
+
+    # Table wrapper
+    if ui:
+        table_open = "      <Card>\n        <CardContent className=\"pt-6\">\n          <Table>\n            <TableHeader>\n              <TableRow>"
+        table_head_close = "              </TableRow>\n            </TableHeader>\n            <TableBody>"
+        row_open = '              <TableRow key={p.id}>'
+        row_close = "              </TableRow>"
+        empty_row = f'              <TableRow><TableCell colSpan={{{len(fields)}}} className="text-center text-muted-foreground py-8">No data found</TableCell></TableRow>'
+        table_close = "            </TableBody>\n          </Table>\n        </CardContent>\n      </Card>"
+    else:
+        table_open = '      <table className="w-full border-collapse">\n        <thead>\n          <tr className="border-b">'
+        table_head_close = "          </tr>\n        </thead>\n        <tbody>"
+        row_open = '            <tr key={p.id} className="border-b">'
+        row_close = "            </tr>"
+        empty_row = f'            <tr><td colSpan={{{len(fields)}}} className="p-4 text-center text-muted-foreground">No data found</td></tr>'
+        table_close = "        </tbody>\n      </table>"
 
     dest.write_text(
         f'import {{ useState }} from "react";\n'
         f'import {{ useQuery }} from "@tanstack/react-query";\n'
         f'import {{ useApiClient }} from "my-api-client/react";\n'
         f'import type {{ {entity}, PageResponse }} from "my-api-client";\n'
+        f'{ui_import}'
         f"\n"
         f"export function {component}() {{\n"
         f"  const api = useApiClient();\n"
@@ -131,38 +170,33 @@ def write_list_page(
         f'    queryFn: () => api.get<PageResponse<{entity}>>("/{resource}", {{ params: {{ page: String(page), size: "20" }} }}),\n'
         f"  }});\n"
         f"\n"
-        f'  if (isLoading) return <p className="p-6 text-gray-500">Loading...</p>;\n'
-        f'  if (error) return <p className="p-6 text-red-600">Failed to load: {{(error as Error).message}}</p>;\n'
+        f'  if (isLoading) return <p className="p-6 text-muted-foreground">Loading...</p>;\n'
+        f'  if (error) return <p className="p-6 text-destructive">Failed to load: {{(error as Error).message}}</p>;\n'
         f"\n"
         f"  const items = data?.content ?? [];\n"
         f"  const totalPages = data?.totalPages ?? 0;\n"
         f"\n"
         f"  return (\n"
-        f'    <div className="p-6">\n'
-        f'      <div className="flex items-center justify-between mb-4">\n'
-        f'        <h1 className="text-2xl font-bold">{label} ({{data?.totalElements ?? 0}})</h1>\n'
+        f'    <div className="space-y-4">\n'
+        f'      <div className="flex items-center justify-between">\n'
+        f'        <h1 className="text-2xl font-bold tracking-tight">{label} ({{data?.totalElements ?? 0}})</h1>\n'
         f"      </div>\n"
-        f'      <table className="w-full border-collapse">\n'
-        f"        <thead>\n"
-        f'          <tr className="border-b">\n'
+        f"{table_open}\n"
         f"{headers}\n"
-        f"          </tr>\n"
-        f"        </thead>\n"
-        f"        <tbody>\n"
+        f"{table_head_close}\n"
         f"          {{items.map((p) => (\n"
-        f'            <tr key={{p.id}} className="border-b">\n'
+        f"{row_open}\n"
         f"{cells}\n"
-        f"            </tr>\n"
+        f"{row_close}\n"
         f"          ))}}\n"
         f"          {{items.length === 0 && (\n"
-        f'            <tr><td colSpan={{{len(fields)}}} className="p-4 text-center text-gray-400">No data found</td></tr>\n'
+        f"{empty_row}\n"
         f"          )}}\n"
-        f"        </tbody>\n"
-        f"      </table>\n"
-        f'      <div className="flex gap-2 mt-4">\n'
-        f'        <button className="px-3 py-1 border rounded disabled:opacity-50" onClick={{() => setPage(p => p - 1)}} disabled={{page === 0}}>Previous</button>\n'
-        f'        <span className="px-3 py-1 text-sm text-gray-500">Page {{page + 1}} of {{totalPages}}</span>\n'
-        f'        <button className="px-3 py-1 border rounded disabled:opacity-50" onClick={{() => setPage(p => p + 1)}} disabled={{page >= totalPages - 1}}>Next</button>\n'
+        f"{table_close}\n"
+        f'      <div className="flex items-center gap-2">\n'
+        f"        {btn_prev}\n"
+        f'        <span className="text-sm text-muted-foreground">Page {{page + 1}} of {{totalPages}}</span>\n'
+        f"        {btn_next}\n"
         f"      </div>\n"
         f"    </div>\n"
         f"  );\n"
@@ -171,10 +205,17 @@ def write_list_page(
 
 
 def write_form_page(
-    dest: Path, component: str, label: str, resource: str, fields: list[dict],
+    dest: Path, component: str, label: str, resource: str, fields: list[dict], uikit_name: str = "",
 ) -> None:
     """Generate a form page with useApiClient + useMutation."""
     entity = pascal_case(resource)
+    ui = uikit_name
+
+    # ui-kit imports
+    if ui:
+        ui_import = f'import {{ Button, Input, Label, Textarea, Checkbox, Card, CardContent, CardHeader, CardTitle, Alert, AlertDescription }} from "{ui}";\n'
+    else:
+        ui_import = ""
 
     # Build form state defaults
     defaults = {}
@@ -199,53 +240,83 @@ def write_form_page(
         required = f.get("required", False)
         req_star = " *" if required else ""
 
-        if ft == "text":
-            inputs.append(
-                f'      <label className="block">\n'
-                f'        <span className="text-sm font-medium">{flabel}{req_star}</span>\n'
-                f'        <textarea className="mt-1 block w-full border rounded p-2" rows={{3}}\n'
-                f'          value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{"required " if required else ""}/>\n'
-                f"      </label>"
-            )
-        elif ft == "boolean":
-            inputs.append(
-                f'      <label className="flex items-center gap-2">\n'
-                f'        <input type="checkbox" checked={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.checked}}))}}/>\n'
-                f'        <span className="text-sm font-medium">{flabel}</span>\n'
-                f"      </label>"
-            )
-        elif ft in ("integer", "long"):
-            inputs.append(
-                f'      <label className="block">\n'
-                f'        <span className="text-sm font-medium">{flabel}{req_star}</span>\n'
-                f'        <input type="number" className="mt-1 block w-full border rounded p-2"\n'
-                f'          value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{"required " if required else ""}/>\n'
-                f"      </label>"
-            )
-        elif ft == "decimal":
-            inputs.append(
-                f'      <label className="block">\n'
-                f'        <span className="text-sm font-medium">{flabel}{req_star}</span>\n'
-                f'        <input type="number" step="0.01" className="mt-1 block w-full border rounded p-2"\n'
-                f'          value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{"required " if required else ""}/>\n'
-                f"      </label>"
-            )
-        elif ft == "date":
-            inputs.append(
-                f'      <label className="block">\n'
-                f'        <span className="text-sm font-medium">{flabel}{req_star}</span>\n'
-                f'        <input type="date" className="mt-1 block w-full border rounded p-2"\n'
-                f'          value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{"required " if required else ""}/>\n'
-                f"      </label>"
-            )
+        if ui:
+            # shadcn-style with Label + Input/Textarea/Checkbox
+            if ft == "text":
+                inputs.append(
+                    f'        <div className="space-y-2">\n'
+                    f'          <Label htmlFor="{fname}">{flabel}{req_star}</Label>\n'
+                    f'          <Textarea id="{fname}" rows={{3}}\n'
+                    f'            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{"required " if required else ""}/>\n'
+                    f"        </div>"
+                )
+            elif ft == "boolean":
+                inputs.append(
+                    f'        <div className="flex items-center space-x-2">\n'
+                    f'          <Checkbox id="{fname}" checked={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: (e.target as HTMLInputElement).checked}}))}}/>\n'
+                    f'          <Label htmlFor="{fname}">{flabel}</Label>\n'
+                    f"        </div>"
+                )
+            elif ft == "date":
+                inputs.append(
+                    f'        <div className="space-y-2">\n'
+                    f'          <Label htmlFor="{fname}">{flabel}{req_star}</Label>\n'
+                    f'          <Input id="{fname}" type="date"\n'
+                    f'            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{"required " if required else ""}/>\n'
+                    f"        </div>"
+                )
+            elif ft in ("integer", "long"):
+                inputs.append(
+                    f'        <div className="space-y-2">\n'
+                    f'          <Label htmlFor="{fname}">{flabel}{req_star}</Label>\n'
+                    f'          <Input id="{fname}" type="number"\n'
+                    f'            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{"required " if required else ""}/>\n'
+                    f"        </div>"
+                )
+            elif ft == "decimal":
+                inputs.append(
+                    f'        <div className="space-y-2">\n'
+                    f'          <Label htmlFor="{fname}">{flabel}{req_star}</Label>\n'
+                    f'          <Input id="{fname}" type="number" step="0.01"\n'
+                    f'            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{"required " if required else ""}/>\n'
+                    f"        </div>"
+                )
+            else:
+                inputs.append(
+                    f'        <div className="space-y-2">\n'
+                    f'          <Label htmlFor="{fname}">{flabel}{req_star}</Label>\n'
+                    f'          <Input id="{fname}" type="text"\n'
+                    f'            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{"required " if required else ""}/>\n'
+                    f"        </div>"
+                )
         else:
-            inputs.append(
-                f'      <label className="block">\n'
-                f'        <span className="text-sm font-medium">{flabel}{req_star}</span>\n'
-                f'        <input type="text" className="mt-1 block w-full border rounded p-2"\n'
-                f'          value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{"required " if required else ""}/>\n'
-                f"      </label>"
-            )
+            # Plain HTML fallback
+            if ft == "text":
+                inputs.append(
+                    f'        <div>\n'
+                    f'          <label className="text-sm font-medium" htmlFor="{fname}">{flabel}{req_star}</label>\n'
+                    f'          <textarea id="{fname}" className="mt-1 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" rows={{3}}\n'
+                    f'            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{"required " if required else ""}/>\n'
+                    f"        </div>"
+                )
+            elif ft == "boolean":
+                inputs.append(
+                    f'        <div className="flex items-center space-x-2">\n'
+                    f'          <input id="{fname}" type="checkbox" className="h-4 w-4 rounded border-primary" checked={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.checked}}))}}/>\n'
+                    f'          <label className="text-sm font-medium" htmlFor="{fname}">{flabel}</label>\n'
+                    f"        </div>"
+                )
+            else:
+                input_type = "number" if ft in ("integer", "long", "decimal") else "date" if ft == "date" else "text"
+                step = ' step="0.01"' if ft == "decimal" else ""
+                val = "checked" if ft == "boolean" else "value"
+                inputs.append(
+                    f'        <div>\n'
+                    f'          <label className="text-sm font-medium" htmlFor="{fname}">{flabel}{req_star}</label>\n'
+                    f'          <input id="{fname}" type="{input_type}"{step} className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"\n'
+                    f'            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{"required " if required else ""}/>\n'
+                    f"        </div>"
+                )
 
     inputs_str = "\n".join(inputs)
 
@@ -254,9 +325,7 @@ def write_form_page(
     for f in fields:
         ft = f.get("type", "string")
         fname = camel_case(f["name"])
-        if ft in ("integer", "long"):
-            body_fields.append(f"        {fname}: form.{fname} ? Number(form.{fname}) : undefined,")
-        elif ft == "decimal":
+        if ft in ("integer", "long", "decimal"):
             body_fields.append(f"        {fname}: form.{fname} ? Number(form.{fname}) : undefined,")
         elif ft == "boolean":
             body_fields.append(f"        {fname}: form.{fname},")
@@ -264,11 +333,48 @@ def write_form_page(
             body_fields.append(f"        {fname}: form.{fname} || undefined,")
     body_str = "\n".join(body_fields)
 
+    # Submit button (with top margin for spacing)
+    if ui:
+        submit_btn = '          <Button type="submit" className="mt-2" disabled={mutation.isPending}>\n            {mutation.isPending ? "Creating..." : "Create"}\n          </Button>'
+    else:
+        submit_btn = '          <button type="submit" disabled={mutation.isPending}\n            className="mt-2 inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground h-10 px-4 py-2 hover:bg-primary/90 disabled:opacity-50">\n            {mutation.isPending ? "Creating..." : "Create"}\n          </button>'
+
+    # Success/error messages
+    if ui:
+        success_msg = '          {success && <Alert className="mb-2"><AlertDescription>Created successfully!</AlertDescription></Alert>}'
+        error_msg = '          {mutation.error && <Alert variant="destructive" className="mb-2"><AlertDescription>{(mutation.error as Error).message}</AlertDescription></Alert>}'
+    else:
+        success_msg = '          {success && <div className="mb-2 p-3 rounded-md border bg-green-50 text-green-800 text-sm">Created successfully!</div>}'
+        error_msg = '          {mutation.error && <div className="mb-2 p-3 rounded-md border border-destructive/50 bg-destructive/5 text-destructive text-sm">{(mutation.error as Error).message}</div>}'
+
+    # Card wrapper — clean indentation
+    if ui:
+        form_open = (
+            f'      <Card className="max-w-xl">\n'
+            f'        <CardHeader>\n'
+            f'          <CardTitle>{label}</CardTitle>\n'
+            f'        </CardHeader>\n'
+            f'        <CardContent>\n'
+            f'{success_msg}\n'
+            f'{error_msg}\n'
+            f'          <form onSubmit={{handleSubmit}} className="space-y-4">'
+        )
+        form_close = f'{submit_btn}\n          </form>\n        </CardContent>\n      </Card>'
+    else:
+        form_open = (
+            f'      <h1 className="text-2xl font-bold tracking-tight mb-4">{label}</h1>\n'
+            f'{success_msg}\n'
+            f'{error_msg}\n'
+            f'      <form onSubmit={{handleSubmit}} className="max-w-xl space-y-4">'
+        )
+        form_close = f'{submit_btn}\n      </form>'
+
     dest.write_text(
         f'import {{ useState }} from "react";\n'
         f'import {{ useMutation, useQueryClient }} from "@tanstack/react-query";\n'
         f'import {{ useApiClient }} from "my-api-client/react";\n'
         f'import type {{ Create{entity}Request, {entity} }} from "my-api-client";\n'
+        f'{ui_import}'
         f"\n"
         f"export function {component}() {{\n"
         f"  const api = useApiClient();\n"
@@ -295,17 +401,10 @@ def write_form_page(
         f"  }};\n"
         f"\n"
         f"  return (\n"
-        f'    <div className="p-6 max-w-lg">\n'
-        f'      <h1 className="text-2xl font-bold mb-4">{label}</h1>\n'
-        f'      {{success && <p className="mb-4 p-2 bg-green-100 text-green-800 rounded">Created successfully!</p>}}\n'
-        f'      {{mutation.error && <p className="mb-4 p-2 bg-red-100 text-red-800 rounded">{{(mutation.error as Error).message}}</p>}}\n'
-        f'      <form onSubmit={{handleSubmit}} className="space-y-4">\n'
+        f'    <div className="space-y-4">\n'
+        f"{form_open}\n"
         f"{inputs_str}\n"
-        f'        <button type="submit" disabled={{mutation.isPending}}\n'
-        f'          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">\n'
-        f'          {{mutation.isPending ? "Creating..." : "Create"}}\n'
-        f"        </button>\n"
-        f"      </form>\n"
+        f"{form_close}\n"
         f"    </div>\n"
         f"  );\n"
         f"}}\n"

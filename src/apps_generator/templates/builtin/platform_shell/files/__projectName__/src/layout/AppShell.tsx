@@ -7,7 +7,7 @@ export function AppShell() {
     <div className="flex flex-col h-screen">
       <Header />
       <AppTabs />
-      <main className="flex-1 overflow-auto bg-gray-50">
+      <main className="flex-1 overflow-auto bg-muted/40">
         <Outlet />
       </main>
     </div>
