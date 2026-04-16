@@ -162,7 +162,7 @@ def _java_field(f: dict, with_validation: bool = False) -> str:
 
 
 def _gen_entity(java_root: Path, pkg: str, entity: str, table: str, fields: list[dict]) -> None:
-    """Generate JPA entity class."""
+    """Generate JPA entity class extending TenantAwareEntity."""
     dest = java_root / "domain" / "model" / f"{entity}.java"
     if dest.exists():
         return
@@ -174,7 +174,7 @@ def _gen_entity(java_root: Path, pkg: str, entity: str, table: str, fields: list
 
     field_lines = "\n\n".join(_java_field(f) for f in fields)
 
-    # Getters and setters
+    # Getters and setters (only for user-defined fields — id/tenantId/timestamps come from base)
     accessors = []
     for f in fields:
         ft = f.get("type", "string")
@@ -191,47 +191,19 @@ def _gen_entity(java_root: Path, pkg: str, entity: str, table: str, fields: list
     dest.write_text(
         f"package {pkg}.domain.model;\n"
         f"\n"
-        f"import jakarta.persistence.*;\n"
-        f"import java.time.LocalDateTime;{import_lines}\n"
+        f"import jakarta.persistence.*;{import_lines}\n"
         f"\n"
+        f"/**\n"
+        f" * Extends TenantAwareEntity which provides id, tenantId, createdAt, updatedAt\n"
+        f" * and a Hibernate @Filter that auto-scopes all queries by tenant.\n"
+        f" */\n"
         f"@Entity\n"
         f"@Table(name = \"{table}\")\n"
-        f"public class {entity} {{\n"
-        f"\n"
-        f"    @Id\n"
-        f"    @GeneratedValue(strategy = GenerationType.IDENTITY)\n"
-        f"    private Long id;\n"
-        f"\n"
-        f"    @Column(nullable = false)\n"
-        f"    private String tenantId;\n"
+        f"public class {entity} extends TenantAwareEntity {{\n"
         f"\n"
         f"{field_lines}\n"
         f"\n"
-        f"    @Column(nullable = false, updatable = false)\n"
-        f"    private LocalDateTime createdAt;\n"
-        f"\n"
-        f"    @Column(nullable = false)\n"
-        f"    private LocalDateTime updatedAt;\n"
-        f"\n"
-        f"    @PrePersist\n"
-        f"    protected void onCreate() {{\n"
-        f"        createdAt = LocalDateTime.now();\n"
-        f"        updatedAt = LocalDateTime.now();\n"
-        f"    }}\n"
-        f"\n"
-        f"    @PreUpdate\n"
-        f"    protected void onUpdate() {{\n"
-        f"        updatedAt = LocalDateTime.now();\n"
-        f"    }}\n"
-        f"\n"
-        f"    // Accessors\n"
-        f"    public Long getId() {{ return id; }}\n"
-        f"    public void setId(Long id) {{ this.id = id; }}\n"
-        f"    public String getTenantId() {{ return tenantId; }}\n"
-        f"    public void setTenantId(String tenantId) {{ this.tenantId = tenantId; }}\n"
         f"{accessor_lines}\n"
-        f"    public LocalDateTime getCreatedAt() {{ return createdAt; }}\n"
-        f"    public LocalDateTime getUpdatedAt() {{ return updatedAt; }}\n"
         f"}}\n"
     )
     console.print(f"    Created: domain/model/{entity}.java")
@@ -283,6 +255,11 @@ def _gen_service(java_root: Path, pkg: str, entity: str, name: str) -> None:
         f"import org.springframework.stereotype.Service;\n"
         f"import org.springframework.transaction.annotation.Transactional;\n"
         f"\n"
+        f"/**\n"
+        f" * Tenant isolation is enforced at two levels:\n"
+        f" * 1. Hibernate @Filter on TenantAwareEntity auto-scopes every SELECT query\n"
+        f" * 2. Explicit tenantId checks in create/update/delete for writes\n"
+        f" */\n"
         f"@Service\n"
         f"@Transactional\n"
         f"public class {entity}Service {{\n"
@@ -295,14 +272,14 @@ def _gen_service(java_root: Path, pkg: str, entity: str, name: str) -> None:
         f"\n"
         f"    @Transactional(readOnly = true)\n"
         f"    public Page<{entity}> list(Pageable pageable) {{\n"
-        f"        String tenantId = TenantContext.requireCurrentTenantId();\n"
-        f"        return repository.findByTenantId(tenantId, pageable);\n"
+        f"        // Hibernate tenant filter auto-scopes this query\n"
+        f"        return repository.findAll(pageable);\n"
         f"    }}\n"
         f"\n"
         f"    @Transactional(readOnly = true)\n"
         f"    public {entity} getById(Long id) {{\n"
-        f"        String tenantId = TenantContext.requireCurrentTenantId();\n"
-        f"        return repository.findByIdAndTenantId(id, tenantId)\n"
+        f"        // Hibernate tenant filter ensures only current tenant's data is visible\n"
+        f"        return repository.findById(id)\n"
         f"            .orElseThrow(() -> new NotFoundException(\"{entity}\", id));\n"
         f"    }}\n"
         f"\n"

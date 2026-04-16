@@ -112,16 +112,17 @@ def test_full_stack_generation(tmp_path: Path):
 
     # ── VERIFY BACKEND ──────────────────────────────────────────────────
 
-    # Entity with tenant isolation
+    # Entity extends TenantAwareEntity (provides id, tenantId, timestamps, Hibernate filter)
     entity = (java_root / "domain" / "model" / "Task.java").read_text()
-    assert "private String tenantId;" in entity
+    assert "extends TenantAwareEntity" in entity
     assert "private String title;" in entity
     assert "private Boolean done;" in entity
     assert "private LocalDate dueDate;" in entity  # kebab → camelCase
 
-    # Service uses TenantContext
+    # Service uses TenantContext for writes, Hibernate filter for reads
     service = (java_root / "domain" / "service" / "TaskService.java").read_text()
     assert "TenantContext.requireCurrentTenantId()" in service
+    assert "repository.findAll(pageable)" in service  # auto-scoped by Hibernate filter
 
     # Controller endpoints
     ctrl = (java_root / "interfaces" / "rest" / "TaskController.java").read_text()

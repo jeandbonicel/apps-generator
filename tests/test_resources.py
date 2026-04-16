@@ -102,10 +102,8 @@ def test_resource_generates_entity(tmp_path: Path):
     assert "package com.test.app.domain.model;" in content
     assert "@Entity" in content
     assert '@Table(name = "products")' in content
-    assert "private String tenantId;" in content
+    assert "extends TenantAwareEntity" in content  # tenantId, id, timestamps from base class
     assert "private String name;" in content
-    assert "private LocalDateTime createdAt;" in content
-    assert "@PrePersist" in content
 
 
 def test_resource_generates_repository(tmp_path: Path):
@@ -125,8 +123,9 @@ def test_resource_generates_service_with_tenant_isolation(tmp_path: Path):
     service = java_root / "domain" / "service" / "ProductService.java"
     assert service.exists()
     content = service.read_text()
-    assert "TenantContext.requireCurrentTenantId()" in content
+    assert "TenantContext.requireCurrentTenantId()" in content  # create sets tenant
     assert "entity.setTenantId(" in content
+    assert "repository.findAll(pageable)" in content  # Hibernate filter auto-scopes
     assert 'new NotFoundException("Product"' in content
     assert "@Transactional" in content
 
@@ -249,6 +248,41 @@ def test_all_field_types(tmp_path: Path):
     assert "private Boolean aBool;" in entity
     assert "private LocalDate aDate;" in entity
     assert "private LocalDateTime aDatetime;" in entity
+
+
+def test_hibernate_tenant_filter_infra(tmp_path: Path):
+    """TenantAwareEntity, TenantFilterInterceptor, and WebConfig form the ORM-level tenant isolation."""
+    template = resolve_template("api-domain")
+    result = generate(
+        template_dir=template.path,
+        output_dir=tmp_path / "infra",
+        cli_values={"projectName": "svc", "groupId": "com.test", "basePackage": "com.test.svc"},
+        interactive=False,
+    )
+
+    base = result / "svc" / "src" / "main" / "java" / "com" / "test" / "svc"
+
+    # TenantAwareEntity has Hibernate filter
+    tenant_entity = (base / "domain" / "model" / "TenantAwareEntity.java").read_text()
+    assert "@MappedSuperclass" in tenant_entity
+    assert '@FilterDef' in tenant_entity
+    assert 'name = "tenantFilter"' in tenant_entity
+    assert "tenant_id = :tenantId" in tenant_entity
+    assert '@Filter(name = "tenantFilter")' in tenant_entity
+    assert "private String tenantId;" in tenant_entity
+    assert "private Long id;" in tenant_entity
+    assert "private LocalDateTime createdAt;" in tenant_entity
+
+    # TenantFilterInterceptor enables the filter
+    interceptor = (base / "infrastructure" / "tenant" / "TenantFilterInterceptor.java").read_text()
+    assert "implements HandlerInterceptor" in interceptor
+    assert 'enableFilter("tenantFilter")' in interceptor
+    assert 'setParameter("tenantId", tenantId)' in interceptor
+
+    # WebConfig registers the interceptor
+    web_config = (base / "infrastructure" / "config" / "WebConfig.java").read_text()
+    assert "TenantFilterInterceptor" in web_config
+    assert "addInterceptor" in web_config
 
 
 def test_shared_infra_generated(tmp_path: Path):
