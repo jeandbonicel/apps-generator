@@ -4,14 +4,6 @@ spring:
       routes: []
   config:
     import: optional:classpath:routes.yaml
-{% if features.oauth2 %}
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: {{ oidcIssuerUri }}
-{% endif %}
-
 logging:
   level:
     {{ basePackage }}: DEBUG

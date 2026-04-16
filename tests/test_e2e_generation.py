@@ -165,7 +165,7 @@ def test_full_stack_generation(tmp_path: Path):
     routes_yaml = yaml.safe_load(find_gateway_routes(gw_dir).read_text())
     routes = routes_yaml["spring"]["cloud"]["gateway"]["routes"]
     assert any(r["id"] == "task-service" for r in routes)
-    assert any("Path=/api/task/**" in r["predicates"] for r in routes)
+    assert any("Path=/api/**" in r["predicates"] for r in routes)
 
     # ── VERIFY SHELL REMOTES ────────────────────────────────────────────
 

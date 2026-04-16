@@ -51,7 +51,7 @@ def generate_page_components(project_root: Path, pages: list[dict], project_name
     for page in pages:
         path = page.get("path", "")
         label = page.get("label", title_case(path))
-        component_name = pascal_case(path) + "Page"
+        component_name = pascal_case(path.replace("/", "-")) + "Page"
         resource = page.get("resource")
         page_type = page.get("type")
         fields = page.get("fields", [])

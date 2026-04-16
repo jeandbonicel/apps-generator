@@ -1,2 +1,3 @@
 SecurityConfig.java: "features.oauth2"
+DevSecurityConfig.java: "features.oauth2"
 OpenApiConfig.java: "features.openapi"

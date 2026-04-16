@@ -70,7 +70,7 @@ def register_in_gateway(gateway_path: Path, service_name: str) -> None:
     new_route = {
         "id": service_name,
         "uri": f"http://localhost:{port}",
-        "predicates": [f"Path=/api/{api_prefix}/**"],
+        "predicates": ["Path=/api/**"],
         "filters": ["StripPrefix=1"],
     }
     routes.append(new_route)
@@ -82,6 +82,6 @@ def register_in_gateway(gateway_path: Path, service_name: str) -> None:
 
     console.print(
         f"[green]Registered '{service_name}' in gateway[/green]\n"
-        f"  Route: /api/{api_prefix}/** -> http://localhost:{port}\n"
+        f"  Route: /api/** -> http://localhost:{port}\n"
         f"  Config: {routes_file}"
     )

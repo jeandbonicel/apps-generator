@@ -46,7 +46,7 @@ def test_register_in_gateway(tmp_path: Path):
     routes = data.get("spring", {}).get("cloud", {}).get("gateway", {}).get("routes", [])
     assert len(routes) == 1
     assert routes[0]["id"] == "order-service"
-    assert "Path=/api/order/**" in routes[0]["predicates"]
+    assert "Path=/api/**" in routes[0]["predicates"]
     assert "StripPrefix=1" in routes[0]["filters"]
 
 
@@ -85,14 +85,14 @@ def test_register_duplicate_service_skipped(tmp_path: Path):
 
 
 def test_gateway_strips_service_suffix_for_api_prefix(tmp_path: Path):
-    """'order-service' → route predicate Path=/api/order/**."""
+    """'order-service' → route predicate Path=/api/**."""
     gw_dir = _setup_gateway(tmp_path)
     register_in_gateway(gateway_path=gw_dir, service_name="order-service")
 
     routes_file = find_gateway_routes(gw_dir)
     data = yaml.safe_load(routes_file.read_text())
     route = data["spring"]["cloud"]["gateway"]["routes"][0]
-    assert "Path=/api/order/**" in route["predicates"]
+    assert "Path=/api/**" in route["predicates"]
 
 
 def test_gateway_no_security_config_without_oauth2(tmp_path: Path):

@@ -75,7 +75,10 @@ def generate(
 
     # Validate --gateway is only used with api-domain
     if gateway is not None and template_info.name != "api-domain":
-        console.print("[red]Error:[/red] --gateway can only be used with the 'api-domain' template.")
+        console.print(
+            "[red]Error:[/red] --gateway can only be used with the 'api-domain' template.\n"
+            "  Hint: Use --gateway when generating your backend service, not the frontend."
+        )
         raise typer.Exit(1)
 
     # Validate --api-client is only used with frontend-app, platform-shell, or api-domain
