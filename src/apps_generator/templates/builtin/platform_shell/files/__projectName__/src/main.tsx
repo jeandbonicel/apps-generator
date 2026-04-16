@@ -11,6 +11,7 @@ import { AuthProvider } from "./auth/AuthProvider";
 {% endif %}
 import { TenantProvider } from "./tenants/TenantProvider";
 import { ShellContextSync } from "./shell/ShellContextSync";
+import { ErrorBoundary } from "./shell/ErrorBoundary";
 import { loadRemotes, getRemotes } from "./config/remotes";
 import { createAppRouter } from "./router";
 {% if features.tailwind %}
@@ -54,14 +55,18 @@ loadRemotes().then(() => {
         <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
           <TenantProvider>
             <ShellContextSync />
-            <RouterProvider router={router} />
+            <ErrorBoundary>
+              <RouterProvider router={router} />
+            </ErrorBoundary>
           </TenantProvider>
         </ClerkProvider>
 {% else %}
         <AuthProvider>
           <TenantProvider>
             <ShellContextSync />
-            <RouterProvider router={router} />
+            <ErrorBoundary>
+              <RouterProvider router={router} />
+            </ErrorBoundary>
           </TenantProvider>
         </AuthProvider>
 {% endif %}

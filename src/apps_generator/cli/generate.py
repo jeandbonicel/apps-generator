@@ -26,6 +26,7 @@ from apps_generator.cli.generators.linking import (
 )
 from apps_generator.cli.generators.resources import parse_resources, generate_resource_scaffolding
 from apps_generator.cli.generators.types import generate_resource_types
+from apps_generator.cli.generators.toast import generate_toast_provider
 
 
 def generate(
@@ -178,11 +179,19 @@ def generate(
         )
 
     # Register ui-kit if --uikit was provided
+    uikit_name = ""
     if uikit is not None and not dry_run:
         project_name = cli_values.get("projectName") or file_values.get("projectName", "")
         project_root = find_consumer_root(result, project_name)
         if project_root:
-            register_uikit(uikit_path=uikit, consumer_root=project_root)
+            uikit_name = register_uikit(uikit_path=uikit, consumer_root=project_root)
+
+    # Generate ToastProvider for platform-shell (after uikit linking so we know the name)
+    if template_info.name == "platform-shell" and not dry_run:
+        project_name = cli_values.get("projectName") or file_values.get("projectName", "")
+        project_root = find_consumer_root(result, project_name)
+        if project_root:
+            generate_toast_provider(project_root, has_uikit=bool(uikit_name), uikit_name=uikit_name)
 
     # Register in gateway if --gateway was provided
     if gateway is not None and not dry_run:

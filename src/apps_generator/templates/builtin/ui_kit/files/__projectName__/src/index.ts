@@ -18,6 +18,8 @@ export {
   SelectLabel, SelectItem, SelectSeparator,
 } from "./components/ui/select";
 export { Tabs, TabsList, TabsTrigger, TabsContent } from "./components/ui/tabs";
+export { Toast, ToastTitle, ToastDescription, toastVariants } from "./components/ui/toast";
+export { Toaster, useToast } from "./components/ui/toaster";
 
 // Layout
 export { Page } from "./components/layout/Page";

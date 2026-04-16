@@ -60,14 +60,17 @@ def find_uikit_package_json(uikit_path: Path) -> Path | None:
     return None
 
 
-def register_uikit(uikit_path: Path, consumer_root: Path) -> None:
-    """Add ui-kit as a file: dependency and extend Tailwind config."""
+def register_uikit(uikit_path: Path, consumer_root: Path) -> str:
+    """Add ui-kit as a file: dependency and extend Tailwind config.
+
+    Returns the ui-kit package name (empty string if linking failed).
+    """
     uikit_path = uikit_path.resolve()
 
     uikit_pkg_path = find_uikit_package_json(uikit_path)
     if uikit_pkg_path is None:
         console.print("[yellow]Warning:[/yellow] Could not find ui-kit's package.json — skipping.")
-        return
+        return ""
 
     with open(uikit_pkg_path) as f:
         uikit_pkg = json.load(f)
@@ -75,7 +78,7 @@ def register_uikit(uikit_path: Path, consumer_root: Path) -> None:
     uikit_name = uikit_pkg.get("name", "")
     if not uikit_name:
         console.print("[yellow]Warning:[/yellow] ui-kit package.json has no name — skipping.")
-        return
+        return ""
 
     uikit_dir = uikit_pkg_path.parent.resolve()
 
@@ -166,6 +169,7 @@ export default {{
         f"  Dependency: {uikit_name} -> file:./local-deps/{uikit_name}\n"
         f"  Tailwind: shadcn theme applied"
     )
+    return uikit_name
 
 
 def register_api_client(api_client_path: Path, consumer_root: Path) -> None:
