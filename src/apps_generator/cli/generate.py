@@ -491,7 +491,7 @@ def _register_in_gateway(gateway_path: Path, service_name: str) -> None:
         "id": service_name,
         "uri": f"http://localhost:{port}",
         "predicates": [f"Path=/api/{api_prefix}/**"],
-        "filters": ["StripPrefix=2"],
+        "filters": ["StripPrefix=1"],
     }
     routes.append(new_route)
 

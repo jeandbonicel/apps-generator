@@ -199,7 +199,7 @@ def _build_compose(projects: list[dict], workspace: Path) -> dict:
             gw_env[f"SPRING_CLOUD_GATEWAY_ROUTES_{i}_ID"] = backend["name"]
             gw_env[f"SPRING_CLOUD_GATEWAY_ROUTES_{i}_URI"] = f"http://{backend['name']}:8080"
             gw_env[f"SPRING_CLOUD_GATEWAY_ROUTES_{i}_PREDICATES_0"] = f"Path=/api/{api_prefix}/**"
-            gw_env[f"SPRING_CLOUD_GATEWAY_ROUTES_{i}_FILTERS_0"] = "StripPrefix=2"
+            gw_env[f"SPRING_CLOUD_GATEWAY_ROUTES_{i}_FILTERS_0"] = "StripPrefix=1"
 
         depends = [b["name"] for b in backends]
         services[gw["name"]] = {
