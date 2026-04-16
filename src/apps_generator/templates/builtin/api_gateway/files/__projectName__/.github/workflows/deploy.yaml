@@ -18,7 +18,7 @@ on:
 
 env:
   REGISTRY: {{ containerRegistry }}
-  IMAGE_NAME: {% raw %}${{ github.repository }}{% endraw %}
+  IMAGE_NAME: {{ containerRegistryOrg }}/{{ projectName }}
 
 jobs:
   deploy:
