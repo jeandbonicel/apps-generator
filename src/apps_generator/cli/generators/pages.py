@@ -193,7 +193,7 @@ def write_list_page(
         f"{empty_row}\n"
         f"          )}}\n"
         f"{table_close}\n"
-        f'      <div className="flex items-center gap-2">\n'
+        f'      <div className="flex items-center justify-center gap-2" style={{{{ paddingTop: "1.5rem" }}}}>\n'
         f"        {btn_prev}\n"
         f'        <span className="text-sm text-muted-foreground">Page {{page + 1}} of {{totalPages}}</span>\n'
         f"        {btn_next}\n"
@@ -333,11 +333,12 @@ def write_form_page(
             body_fields.append(f"        {fname}: form.{fname} || undefined,")
     body_str = "\n".join(body_fields)
 
-    # Submit button (with top margin for spacing)
+    # Submit button — use inline style for margin since Tailwind classes may not
+    # be generated when MFE is loaded via Module Federation in the shell
     if ui:
-        submit_btn = '          <Button type="submit" className="mt-2" disabled={mutation.isPending}>\n            {mutation.isPending ? "Creating..." : "Create"}\n          </Button>'
+        submit_btn = '          <div style={{ paddingTop: "1.5rem" }}>\n            <Button type="submit" disabled={mutation.isPending}>\n              {mutation.isPending ? "Creating..." : "Create"}\n            </Button>\n          </div>'
     else:
-        submit_btn = '          <button type="submit" disabled={mutation.isPending}\n            className="mt-2 inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground h-10 px-4 py-2 hover:bg-primary/90 disabled:opacity-50">\n            {mutation.isPending ? "Creating..." : "Create"}\n          </button>'
+        submit_btn = '          <div style={{ paddingTop: "1.5rem" }}>\n            <button type="submit" disabled={mutation.isPending}\n              className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground h-10 px-4 py-2 hover:bg-primary/90 disabled:opacity-50">\n              {mutation.isPending ? "Creating..." : "Create"}\n            </button>\n          </div>'
 
     # Success/error messages
     if ui:
@@ -365,7 +366,7 @@ def write_form_page(
             f'      <h1 className="text-2xl font-bold tracking-tight mb-4">{label}</h1>\n'
             f'{success_msg}\n'
             f'{error_msg}\n'
-            f'      <form onSubmit={{handleSubmit}} className="max-w-xl space-y-4">'
+            f'      <form onSubmit={{handleSubmit}} className="max-w-xl space-y-6">'
         )
         form_close = f'{submit_btn}\n      </form>'
 
