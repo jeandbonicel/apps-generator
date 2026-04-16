@@ -115,14 +115,43 @@ def _identify_project(path: Path) -> dict | None:
             if match:
                 name = match.group(1)
 
+        # Try to read OIDC issuer URI from application.yaml
+        oidc_issuer = _read_oidc_issuer(path)
+
         # Check if it's a gateway (has routes.yaml)
         if (path / "src" / "main" / "resources" / "routes.yaml").exists():
-            return {"type": "api-gateway", "name": name, "dir": path}
+            result: dict = {"type": "api-gateway", "name": name, "dir": path}
+            if oidc_issuer:
+                result["oidcIssuerUri"] = oidc_issuer
+            return result
 
         # It's a domain service
-        return {"type": "api-domain", "name": name, "dir": path}
+        result = {"type": "api-domain", "name": name, "dir": path}
+        if oidc_issuer:
+            result["oidcIssuerUri"] = oidc_issuer
+        return result
 
     return None
+
+
+def _read_oidc_issuer(path: Path) -> str | None:
+    """Read the OIDC issuer URI from a Spring Boot application.yaml."""
+    app_yaml = path / "src" / "main" / "resources" / "application.yaml"
+    if not app_yaml.exists():
+        return None
+    try:
+        with open(app_yaml) as f:
+            config = yaml.safe_load(f)
+        return (
+            config.get("spring", {})
+            .get("security", {})
+            .get("oauth2", {})
+            .get("resourceserver", {})
+            .get("jwt", {})
+            .get("issuer-uri")
+        )
+    except (yaml.YAMLError, OSError):
+        return None
 
 
 def _build_compose(projects: list[dict], workspace: Path) -> dict:
@@ -134,14 +163,17 @@ def _build_compose(projects: list[dict], workspace: Path) -> dict:
     frontends = [p for p in projects if p["type"] == "frontend-app"]
     shells = [p for p in projects if p["type"] == "platform-shell"]
 
+    # Resolve OIDC issuer URI from any project that has it configured
+    oidc_issuer = _resolve_oidc_issuer(projects)
+
     # PostgreSQL (if any backends need it)
     if backends:
         pg_service: dict = {
             "image": "postgres:16-alpine",
-            "ports": ["5432:5432"],
+            "ports": ["${POSTGRES_PORT:-5432}:5432"],
             "environment": {
-                "POSTGRES_USER": "postgres",
-                "POSTGRES_PASSWORD": "postgres",
+                "POSTGRES_USER": "${POSTGRES_USER:-postgres}",
+                "POSTGRES_PASSWORD": "${POSTGRES_PASSWORD:-postgres}",
             },
             "healthcheck": {
                 "test": ["CMD-SHELL", "pg_isready -U postgres"],
@@ -174,14 +206,15 @@ def _build_compose(projects: list[dict], workspace: Path) -> dict:
             "environment": {
                 "SERVER_PORT": "8080",
                 "SPRING_DATASOURCE_URL": f"jdbc:postgresql://postgres:5432/{db_name}",
-                "SPRING_DATASOURCE_USERNAME": "postgres",
-                "SPRING_DATASOURCE_PASSWORD": "postgres",
-                "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI": "https://auth.example.com/realms/main",
+                "SPRING_DATASOURCE_USERNAME": "${POSTGRES_USER:-postgres}",
+                "SPRING_DATASOURCE_PASSWORD": "${POSTGRES_PASSWORD:-postgres}",
             },
             "depends_on": {
                 "postgres": {"condition": "service_healthy"},
             },
         }
+        if oidc_issuer:
+            svc["environment"]["SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI"] = oidc_issuer
         services[backend["name"]] = svc
         backend["docker_port"] = port
         port += 1
@@ -190,8 +223,9 @@ def _build_compose(projects: list[dict], workspace: Path) -> dict:
     for gw in gateways:
         gw_env: dict = {
             "SERVER_PORT": "8080",
-            "SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI": "https://auth.example.com/realms/main",
         }
+        if oidc_issuer:
+            gw_env["SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI"] = oidc_issuer
 
         # Add route env vars pointing to Docker service names
         for i, backend in enumerate(backends):
@@ -226,19 +260,32 @@ def _build_compose(projects: list[dict], workspace: Path) -> dict:
     # Shell
     for shell in shells:
         depends = [gw["name"] for gw in gateways] + [fe["name"] for fe in frontends]
-        services[shell["name"]] = {
+        shell_svc: dict = {
             "build": {
                 "context": f"./{shell['path']}",
                 "dockerfile": "docker/Dockerfile",
             },
             "ports": ["80:80"],
-            "depends_on": depends if depends else None,
         }
-        # Remove None values
-        if not depends:
-            del services[shell["name"]]["depends_on"]
+        # Set GATEWAY_URL so nginx proxies /api to the gateway
+        if gateways:
+            shell_svc["environment"] = {
+                "GATEWAY_URL": f"http://{gateways[0]['name']}:8080",
+            }
+        if depends:
+            shell_svc["depends_on"] = depends
+        services[shell["name"]] = shell_svc
 
     return {"services": services}
+
+
+def _resolve_oidc_issuer(projects: list[dict]) -> str | None:
+    """Find the OIDC issuer URI from project configs (gateway first, then backends)."""
+    for p in projects:
+        issuer = p.get("oidcIssuerUri")
+        if issuer:
+            return issuer
+    return None
 
 
 def _build_postgres_init_script(backends: list[dict]) -> str:

@@ -36,6 +36,11 @@
       "default": 5001,
       "description": "Dev server port"
     },
+    "gatewayPort": {
+      "type": "integer",
+      "default": 8080,
+      "description": "API gateway port (for dev proxy)"
+    },
     "pages": {
       "type": "string",
       "default": "[]",

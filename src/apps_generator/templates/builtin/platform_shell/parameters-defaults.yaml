@@ -7,6 +7,8 @@ oidcClientId: "platform-shell"
 oidcScopes: "openid profile email"
 apiBaseUrl: "/api"
 tenantsEndpoint: "/api/tenants"
+devPort: 5173
+gatewayPort: 8080
 nodeVersion: 20
 packageManager: "pnpm"
 containerRegistry: "ghcr.io"

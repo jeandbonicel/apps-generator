@@ -1,10 +1,13 @@
 FROM node:{{ nodeVersion }}-alpine AS builder
+{% if packageManager == "pnpm" %}
+RUN corepack enable && corepack prepare pnpm@latest --activate
+{% endif %}
 WORKDIR /app
-COPY package*.json ./
+COPY package*.json {% if packageManager == "pnpm" %}pnpm-lock.yaml* {% endif %}./
 COPY local-deps/ ./local-deps/
-RUN npm install
+RUN {{ packageManager }} install
 COPY . .
-RUN npm run build
+RUN {{ packageManager }} run build
 
 FROM nginx:alpine
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf

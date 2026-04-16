@@ -35,10 +35,10 @@ export default defineConfig({
     }),
   ],
   server: {
-    port: 5173,
+    port: {{ devPort }},
     proxy: {
       "{{ apiBaseUrl }}": {
-        target: "http://localhost:8080",
+        target: "http://localhost:{{ gatewayPort }}",
         changeOrigin: true,
       },
     },

@@ -8,7 +8,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? "html" : "list",
   use: {
-    baseURL: "http://localhost:5173",
+    baseURL: "http://localhost:{{ devPort }}",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
@@ -28,7 +28,7 @@ export default defineConfig({
   ],
   webServer: {
     command: "{{ packageManager }} run dev",
-    url: "http://localhost:5173",
+    url: "http://localhost:{{ devPort }}",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

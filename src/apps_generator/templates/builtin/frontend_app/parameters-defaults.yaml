@@ -5,6 +5,7 @@ packageManager: "pnpm"
 apiBaseUrl: "/api"
 exposedModule: "./App"
 devPort: 5001
+gatewayPort: 8080
 pages: "[]"
 containerRegistry: "ghcr.io"
 containerRegistryOrg: "your-org"

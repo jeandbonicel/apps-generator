@@ -22,7 +22,7 @@ export default defineConfig({
     origin: "http://localhost:{{ devPort }}",
     proxy: {
       "{{ apiBaseUrl }}": {
-        target: "http://localhost:8080",
+        target: "http://localhost:{{ gatewayPort }}",
         changeOrigin: true,
       },
     },
