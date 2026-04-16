@@ -8,8 +8,9 @@ import "./i18n";
 import { ClerkProvider } from "@clerk/clerk-react";
 {% else %}
 import { AuthProvider } from "./auth/AuthProvider";
-import { TenantProvider } from "./tenants/TenantProvider";
 {% endif %}
+import { TenantProvider } from "./tenants/TenantProvider";
+import { ShellContextSync } from "./shell/ShellContextSync";
 import { loadRemotes, getRemotes } from "./config/remotes";
 import { createAppRouter } from "./router";
 {% if features.tailwind %}
@@ -51,11 +52,15 @@ loadRemotes().then(() => {
       <QueryClientProvider client={queryClient}>
 {% if authProvider == "clerk" %}
         <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
-          <RouterProvider router={router} />
+          <TenantProvider>
+            <ShellContextSync />
+            <RouterProvider router={router} />
+          </TenantProvider>
         </ClerkProvider>
 {% else %}
         <AuthProvider>
           <TenantProvider>
+            <ShellContextSync />
             <RouterProvider router={router} />
           </TenantProvider>
         </AuthProvider>

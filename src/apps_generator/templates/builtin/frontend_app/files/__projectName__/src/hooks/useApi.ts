@@ -45,7 +45,7 @@ export async function apiFetch<T = unknown>(
   }
 
   if (tenantId) {
-    headers["X-Tenant-Id"] = tenantId;
+    headers["X-Tenant-ID"] = tenantId;
   }
 
   const response = await fetch(`${API_BASE}${path}`, {
