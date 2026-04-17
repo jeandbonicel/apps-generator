@@ -35,6 +35,7 @@ Each resource has a `name` (used for class names, table names, and URL paths) an
 | `boolean` | `Boolean` | `BOOLEAN` | `boolean` | |
 | `date` | `LocalDate` | `DATE` | `string` | ISO 8601 date (e.g., `2025-01-15`) |
 | `datetime` | `LocalDateTime` | `TIMESTAMP` | `string` | ISO 8601 datetime (e.g., `2025-01-15T10:00:00`) |
+| `enum` | Java enum class | `VARCHAR` | union type | Predefined values. Use `"values": ["a", "b", "c"]`. Generates Java enum with `@Enumerated(EnumType.STRING)`, TypeScript union (`"a" \| "b" \| "c"`), and `<select>` dropdown in forms. |
 
 ## Field Constraints
 
