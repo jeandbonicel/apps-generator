@@ -90,7 +90,9 @@ Features: `database` (on), `oauth2` (on), `docker` (on), `kubernetes` (on), `cic
 }]
 ```
 
-**Field types:** string, text, integer, long, decimal, boolean, date, datetime.
+**Field types:** string, text, integer, long, decimal, boolean, date, datetime, enum.
+
+**Enum fields** use a `values` array: `{"name": "status", "type": "enum", "values": ["active", "inactive"]}`. Generates Java enum class, `@Enumerated(EnumType.STRING)` on entity, TypeScript union type (`"active" | "inactive"`), and `<select>` dropdown in forms.
 
 **Constraints:** required, unique, maxLength, minLength, min, max, pattern.
 
@@ -123,9 +125,17 @@ Features: `docker` (on), `kubernetes` (on), `cicd` (on), `tailwind` (on).
 ```
 
 **Page types:**
-- `list` — table with useApiClient + useQuery, pagination, Card wrapper
-- `form` — create form with validation, useMutation, Card wrapper
+- `list` — table with useApiClient + useQuery, pagination, Card wrapper. Null-safe rendering (shows "—" for null values).
+- `form` — create form with type-aware inputs (datetime picker, number, textarea, checkbox, enum select dropdowns). Resource lookups auto-detected (e.g. `dogName` field renders as dropdown fetching from `/dog` API). useMutation, Card wrapper.
 - `dashboard` — stat cards + bar chart (Recharts) + recent items table
+
+**Smart form features:**
+- `enum` fields with `values` array → `<select>` dropdown with predefined options
+- `datetime` fields → `<input type="datetime-local">`
+- `date` fields → `<input type="date">`
+- `text` fields → `<textarea>`
+- `boolean` fields → checkbox
+- Resource lookups: when a field name matches `{resource}Name` or `{resource}Id` and that resource exists in the pages config, the form auto-generates a `<select>` dropdown populated from the API, with "Create one first" message when empty.
 
 When `--uikit` is linked, pages import shadcn components (Button, Input, Table, Card, etc.). Without ui-kit, falls back to plain HTML with matching Tailwind classes.
 
@@ -201,6 +211,7 @@ src/apps_generator/
 | boolean | Boolean | BOOLEAN | boolean |
 | date | LocalDate | DATE | string |
 | datetime | LocalDateTime | TIMESTAMP | string |
+| enum | Java enum class | VARCHAR | union type (e.g. `"a" \| "b"`) |
 
 ## CSS theme
 
@@ -237,7 +248,7 @@ Key test modules:
 
 ## Conventions
 
-- Template files use Jinja2 (`{{ variable }}`, `{% if %}`, `{% raw %}`)
+- Template files use Jinja2 (`{{ variable }}`, `{% if %}`). For GitHub Actions `${{ }}` expressions, use `{{ '${{ ... }}' }}` (NOT `{% raw %}` which breaks with `trim_blocks`).
 - `.conditions.yaml` controls file inclusion based on feature flags
 - Filenames support `__var__` and `__var|filter__` patterns
 - All entities extend TenantAwareEntity (Hibernate @Filter for tenant isolation)

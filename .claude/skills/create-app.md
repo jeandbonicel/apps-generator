@@ -38,11 +38,11 @@ Resources:
      - weightKg (decimal, min: 0)
 
   2. appointment
-     - dogName (string, required)
-     - service (string, required)
+     - dogName (string, required) → auto-detected as lookup to dog resource
+     - service (enum, required, values: [bath, haircut, nails, teeth, full-grooming])
      - date (datetime, required)
      - notes (text)
-     - status (string, required, maxLength: 30)
+     - status (enum, required, values: [scheduled, in-progress, completed, cancelled])
 
 Pages:
   dog-tracker MFE:
@@ -139,26 +139,11 @@ Port assignment: first MFE gets 5001, second 5002, etc.
 
 ## Step 4: Infra Engineer — Build and Wire
 
-### 4a. Build shared libraries
+### 4a. Shared libraries (auto-built)
 
-```bash
-cd $WORKSPACE/api-client/<client-name> && npm install && npm run build
-cd $WORKSPACE/ui-kit/<uikit-name> && npm install && npm run build
-```
+Shared libs (ui-kit, api-client) are **automatically built** when linked via `--uikit` / `--api-client`. The linking step detects missing `dist/` and runs `pnpm install && pnpm build` automatically. No manual build step needed.
 
-### 4b. Copy built libs to all consumers
-
-```bash
-for consumer in $WORKSPACE/shell/<shell-name> $WORKSPACE/<mfe-name>/<mfe-name> ...; do
-  for lib in <client-name> <uikit-name>; do
-    src="$WORKSPACE/$([ $lib = <client-name> ] && echo api-client || echo ui-kit)/$lib"
-    dest="$consumer/local-deps/$lib"
-    [ -d "$dest" ] && cp -r "$src/dist" "$dest/"
-  done
-done
-```
-
-### 4c. Generate docker-compose
+### 4b. Generate docker-compose
 
 ```bash
 $APPGEN docker-compose $WORKSPACE
@@ -268,7 +253,9 @@ To create test data:
 When designing resources:
 
 - **Naming**: resource names are singular (product, not products). kebab-case for multi-word (grooming-service).
-- **Field types**: use `string` for short text, `text` for long text, `decimal` for money/weight, `integer` for counts, `boolean` for flags, `date`/`datetime` for temporal.
+- **Field types**: use `string` for short text, `text` for long text, `decimal` for money/weight, `integer` for counts, `boolean` for flags, `date`/`datetime` for temporal, `enum` for predefined choices.
+- **Enum fields**: use `"type": "enum", "values": ["option1", "option2"]` for fields with predefined choices (e.g. status, category, size). Generates Java enum, TS union type, and `<select>` dropdown in forms.
+- **Resource lookups**: when a form field references another resource (e.g. `dogName` in a log), the form auto-generates a dropdown populated from the API. Name the field as `{resourceName}Name` or `{resourceName}Id` for auto-detection.
 - **Required fields**: mark fields that must always be filled. Usually the "name" or primary identifier.
 - **Constraints**: use `maxLength` on strings, `min`/`max` on numbers, `unique` on codes/SKUs.
 - **One service per domain**: group related resources in one backend (e.g., dog + breed in one service, appointment + service in another).

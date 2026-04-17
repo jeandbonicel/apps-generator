@@ -30,7 +30,7 @@ appgen generate api-domain -o ./product-service \
   -s projectName=product-service \
   -s groupId=com.example \
   -s basePackage=com.example.products \
-  -s 'resources=[{"name":"product","fields":[{"name":"name","type":"string","required":true,"maxLength":255},{"name":"price","type":"decimal","required":true,"min":0},{"name":"active","type":"boolean"}]}]' \
+  -s 'resources=[{"name":"product","fields":[{"name":"name","type":"string","required":true,"maxLength":255},{"name":"price","type":"decimal","required":true,"min":0},{"name":"status","type":"enum","required":true,"values":["active","inactive","archived"]},{"name":"active","type":"boolean"}]}]' \
   --gateway ./gateway --api-client ./api-client
 
 # 6. Micro-frontend with data-aware pages (dashboard + list + form)
@@ -54,11 +54,7 @@ appgen generate frontend-app -o ./products -s projectName=products -s devPort=50
   ]' \
   --shell ./my-platform --uikit ./ui-kit --api-client ./api-client
 
-# 7. Build shared libs, then run everything
-cd ui-kit/my-ui-kit && npm install && npm run build && cd ../..
-cd api-client/my-api-client && npm install && npm run build && cd ../..
-
-# 8. Generate Docker Compose and start
+# 7. Generate Docker Compose and start (shared libs auto-build during linking)
 appgen docker-compose .
 docker compose up --build
 ```

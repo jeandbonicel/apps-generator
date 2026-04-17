@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.2.0] - 2026-04-17
+
+### Added
+- Enum field type with Java enums, TypeScript union types, and `<select>` dropdowns in forms
+- Smart form generation: datetime picker, resource lookups (e.g. `dogName` auto-detects `dog` resource and renders dropdown), "Create one first" message when lookup is empty
+- Auto-build shared libs during linking (no manual `pnpm build` needed before Docker)
+- ESLint v9 flat config for frontend-app and platform-shell templates
+- PostgreSQL service container in api-domain CI workflow for Testcontainers
+
+### Fixed
+- Git init now runs at inner project directory (not outer wrapper directory)
+- Page generator uses actual api-client package name from `--api-client` flag (was hardcoded as `my-api-client`)
+- Gradle wrapper stubs replaced with real Gradle 8.8 wrapper (jar + properties)
+- YAML workflow templates use `{{ '...' }}` instead of `{% raw %}{% endraw %}` (fixes Jinja2 `trim_blocks` eating newlines)
+- CI workflows trigger on push to `main` AND `master` (was PR-only)
+- Null-safe list page rendering for decimal, date, and string fields (shows "—" for null)
+- Module Federation MFE builds use `minify: false` to fix React shared module variable mangling
+- `.gitignore` ordering: `!gradle/wrapper/gradle-wrapper.jar` exception now comes after `*.jar` rule
+
 ## [0.1.0] - 2026-04-17
 
 ### Added
