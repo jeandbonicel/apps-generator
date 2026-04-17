@@ -13,7 +13,8 @@ venv/
 .pytest_cache/
 .coverage
 htmlcov/
-.claude/
+.claude/*
+!.claude/skills/
 .vscode/
 .idea/
 *.swp
