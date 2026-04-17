@@ -21,6 +21,7 @@ def find_consumer_root(output_dir: Path, project_name: str) -> Path | None:
 def copy_lib_to_local_deps(lib_dir: Path, consumer_root: Path, lib_name: str) -> None:
     """Copy a shared library into consumer's local-deps/ for Docker builds."""
     import shutil
+
     local_deps = consumer_root / "local-deps" / lib_name
     local_deps.mkdir(parents=True, exist_ok=True)
 
@@ -101,7 +102,7 @@ def register_uikit(uikit_path: Path, consumer_root: Path) -> str:
     # 2. Update tailwind.config.ts with shadcn theme + ui-kit content path
     tailwind_path = consumer_root / "tailwind.config.ts"
     if tailwind_path.exists():
-        tailwind_content = f'''/** @type {{import('tailwindcss').Config}} */
+        tailwind_content = f"""/** @type {{import('tailwindcss').Config}} */
 export default {{
   darkMode: ["class"],
   content: [
@@ -181,7 +182,7 @@ export default {{
   ],
   plugins: [],
 }};
-'''
+"""
         tailwind_path.write_text(tailwind_content)
 
     # 3. Replace consumer's index.css with ui-kit's globals.css (includes Tailwind + CSS variables)
@@ -242,6 +243,7 @@ def register_api_client(api_client_path: Path, consumer_root: Path) -> None:
 def find_java_root(output_dir: Path, project_name: str, base_package: str) -> Path | None:
     """Find the Java source root for a generated api-domain project."""
     from apps_generator.utils.naming import package_to_path
+
     pkg_path = package_to_path(base_package)
     candidates = [
         output_dir / project_name / "src" / "main" / "java" / pkg_path,

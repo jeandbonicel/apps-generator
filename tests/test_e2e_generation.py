@@ -48,28 +48,44 @@ def test_full_stack_generation(tmp_path: Path):
     # 1. Generate infrastructure
     _gen("ui-kit", tmp_path, "uikit", {"projectName": "test-ui"})
     _gen("api-client", tmp_path, "client", {"projectName": "test-client"})
-    gw_dir = _gen("api-gateway", tmp_path, "gw", {
-        "projectName": "test-gw", "groupId": "com.t", "basePackage": "com.t.gw",
-        "features.oauth2": "false",
-    })
+    gw_dir = _gen(
+        "api-gateway",
+        tmp_path,
+        "gw",
+        {
+            "projectName": "test-gw",
+            "groupId": "com.t",
+            "basePackage": "com.t.gw",
+            "features.oauth2": "false",
+        },
+    )
     shell_dir = _gen("platform-shell", tmp_path, "shell", {"projectName": "test-shell"})
 
     # 2. Generate backend with resources
-    resource_json = json.dumps([{
-        "name": "task",
-        "fields": [
-            {"name": "title", "type": "string", "required": True, "maxLength": 200},
-            {"name": "done", "type": "boolean"},
-            {"name": "due-date", "type": "date"},
+    resource_json = json.dumps(
+        [
+            {
+                "name": "task",
+                "fields": [
+                    {"name": "title", "type": "string", "required": True, "maxLength": 200},
+                    {"name": "done", "type": "boolean"},
+                    {"name": "due-date", "type": "date"},
+                ],
+            }
         ]
-    }])
+    )
 
-    be_dir = _gen("api-domain", tmp_path, "be", {
-        "projectName": "task-service",
-        "groupId": "com.t",
-        "basePackage": "com.t.task",
-        "features.oauth2": "false",
-    })
+    be_dir = _gen(
+        "api-domain",
+        tmp_path,
+        "be",
+        {
+            "projectName": "task-service",
+            "groupId": "com.t",
+            "basePackage": "com.t.task",
+            "features.oauth2": "false",
+        },
+    )
 
     java_root = find_java_root(be_dir, "task-service", "com.t.task")
     res_root = find_resources_root(be_dir, "task-service")
@@ -89,17 +105,45 @@ def test_full_stack_generation(tmp_path: Path):
     register_api_client(api_client_path=tmp_path / "client", consumer_root=shell_root)
 
     # 6. Generate frontend with resource-aware pages
-    fe_dir = _gen("frontend-app", tmp_path, "fe", {
-        "projectName": "tasks", "devPort": "5001",
-    })
+    fe_dir = _gen(
+        "frontend-app",
+        tmp_path,
+        "fe",
+        {
+            "projectName": "tasks",
+            "devPort": "5001",
+        },
+    )
     fe_root = find_project_root(fe_dir, "tasks")
 
-    pages = parse_pages(json.dumps([
-        {"path": "list", "label": "All Tasks", "resource": "task", "type": "list",
-         "fields": [{"name": "title", "type": "string"}, {"name": "done", "type": "boolean"}, {"name": "due-date", "type": "date"}]},
-        {"path": "new", "label": "New Task", "resource": "task", "type": "form",
-         "fields": [{"name": "title", "type": "string", "required": True}, {"name": "done", "type": "boolean"}, {"name": "due-date", "type": "date"}]},
-    ]))
+    pages = parse_pages(
+        json.dumps(
+            [
+                {
+                    "path": "list",
+                    "label": "All Tasks",
+                    "resource": "task",
+                    "type": "list",
+                    "fields": [
+                        {"name": "title", "type": "string"},
+                        {"name": "done", "type": "boolean"},
+                        {"name": "due-date", "type": "date"},
+                    ],
+                },
+                {
+                    "path": "new",
+                    "label": "New Task",
+                    "resource": "task",
+                    "type": "form",
+                    "fields": [
+                        {"name": "title", "type": "string", "required": True},
+                        {"name": "done", "type": "boolean"},
+                        {"name": "due-date", "type": "date"},
+                    ],
+                },
+            ]
+        )
+    )
     generate_page_components(fe_root, pages, "tasks")
 
     # Link dependencies to frontend
@@ -158,11 +202,12 @@ def test_full_stack_generation(tmp_path: Path):
     form_page = (fe_root / "src" / "routes" / "NewPage.tsx").read_text()
     assert "CreateTaskRequest" in form_page
     assert 'type="checkbox"' in form_page  # boolean field
-    assert 'type="date"' in form_page      # date field
+    assert 'type="date"' in form_page  # date field
 
     # ── VERIFY GATEWAY ROUTES ───────────────────────────────────────────
 
     from apps_generator.cli.generators.gateway import find_gateway_routes
+
     routes_yaml = yaml.safe_load(find_gateway_routes(gw_dir).read_text())
     routes = routes_yaml["spring"]["cloud"]["gateway"]["routes"]
     assert any(r["id"] == "task-service" for r in routes)
@@ -190,12 +235,17 @@ def test_full_stack_generation(tmp_path: Path):
 
 def test_full_stack_no_resources_still_works(tmp_path: Path):
     """A backend without resources still generates correctly (health endpoint only)."""
-    be_dir = _gen("api-domain", tmp_path, "be", {
-        "projectName": "empty-svc",
-        "groupId": "com.t",
-        "basePackage": "com.t.empty",
-        "features.oauth2": "false",
-    })
+    be_dir = _gen(
+        "api-domain",
+        tmp_path,
+        "be",
+        {
+            "projectName": "empty-svc",
+            "groupId": "com.t",
+            "basePackage": "com.t.empty",
+            "features.oauth2": "false",
+        },
+    )
 
     project = be_dir / "empty-svc"
     assert (project / "build.gradle.kts").exists()
@@ -215,9 +265,15 @@ def test_full_stack_no_resources_still_works(tmp_path: Path):
 
 def test_frontend_without_api_client_still_works(tmp_path: Path):
     """A frontend without --api-client generates placeholder pages (no typed imports)."""
-    fe_dir = _gen("frontend-app", tmp_path, "fe", {
-        "projectName": "simple-app", "devPort": "5001",
-    })
+    fe_dir = _gen(
+        "frontend-app",
+        tmp_path,
+        "fe",
+        {
+            "projectName": "simple-app",
+            "devPort": "5001",
+        },
+    )
     fe_root = find_project_root(fe_dir, "simple-app")
 
     pages = parse_pages('[{"path":"home","label":"Home Page"}]')

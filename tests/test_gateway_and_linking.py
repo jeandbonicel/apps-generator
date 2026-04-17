@@ -17,6 +17,7 @@ from apps_generator.cli.generators.linking import (
 
 # ── Gateway registration ────────────────────────────────────────────────────
 
+
 def _setup_gateway(tmp_path: Path) -> Path:
     """Generate a gateway and return the output dir."""
     template = resolve_template("api-gateway")
@@ -132,6 +133,7 @@ def test_shell_nginx_has_security_headers(tmp_path: Path):
 
 # ── API client linking ───────────────────────────────────────────────────────
 
+
 def _setup_api_client(tmp_path: Path) -> Path:
     """Generate an api-client and return its output dir."""
     template = resolve_template("api-client")
@@ -196,6 +198,7 @@ def test_find_api_client_src(tmp_path: Path):
 
 # ── Docker compose generation ────────────────────────────────────────────────
 
+
 def test_docker_compose_scans_projects(tmp_path: Path):
     """docker-compose command scans workspace and generates correct services."""
     from apps_generator.cli.docker_compose import _scan_workspace
@@ -206,18 +209,30 @@ def test_docker_compose_scans_projects(tmp_path: Path):
     fe_template = resolve_template("frontend-app")
     sh_template = resolve_template("platform-shell")
 
-    generate(template_dir=gw_template.path, output_dir=tmp_path / "gateway",
-             cli_values={"projectName": "gw", "groupId": "com.t", "basePackage": "com.t.gw"},
-             interactive=False)
-    generate(template_dir=be_template.path, output_dir=tmp_path / "backend",
-             cli_values={"projectName": "svc", "groupId": "com.t", "basePackage": "com.t.svc"},
-             interactive=False)
-    generate(template_dir=fe_template.path, output_dir=tmp_path / "fe",
-             cli_values={"projectName": "app", "devPort": "5001"},
-             interactive=False)
-    generate(template_dir=sh_template.path, output_dir=tmp_path / "shell",
-             cli_values={"projectName": "shell"},
-             interactive=False)
+    generate(
+        template_dir=gw_template.path,
+        output_dir=tmp_path / "gateway",
+        cli_values={"projectName": "gw", "groupId": "com.t", "basePackage": "com.t.gw"},
+        interactive=False,
+    )
+    generate(
+        template_dir=be_template.path,
+        output_dir=tmp_path / "backend",
+        cli_values={"projectName": "svc", "groupId": "com.t", "basePackage": "com.t.svc"},
+        interactive=False,
+    )
+    generate(
+        template_dir=fe_template.path,
+        output_dir=tmp_path / "fe",
+        cli_values={"projectName": "app", "devPort": "5001"},
+        interactive=False,
+    )
+    generate(
+        template_dir=sh_template.path,
+        output_dir=tmp_path / "shell",
+        cli_values={"projectName": "shell"},
+        interactive=False,
+    )
 
     projects = _scan_workspace(tmp_path)
     types = {p["type"] for p in projects}
@@ -232,9 +247,12 @@ def test_docker_compose_env_substitution(tmp_path: Path):
     from apps_generator.cli.docker_compose import _scan_workspace, _build_compose
 
     be_template = resolve_template("api-domain")
-    generate(template_dir=be_template.path, output_dir=tmp_path / "be",
-             cli_values={"projectName": "svc", "groupId": "com.t", "basePackage": "com.t.svc"},
-             interactive=False)
+    generate(
+        template_dir=be_template.path,
+        output_dir=tmp_path / "be",
+        cli_values={"projectName": "svc", "groupId": "com.t", "basePackage": "com.t.svc"},
+        interactive=False,
+    )
 
     projects = _scan_workspace(tmp_path)
     compose = _build_compose(projects, tmp_path)
@@ -251,12 +269,18 @@ def test_docker_compose_gateway_url_for_shell(tmp_path: Path):
     gw_template = resolve_template("api-gateway")
     sh_template = resolve_template("platform-shell")
 
-    generate(template_dir=gw_template.path, output_dir=tmp_path / "gw",
-             cli_values={"projectName": "my-gw", "groupId": "com.t", "basePackage": "com.t.gw"},
-             interactive=False)
-    generate(template_dir=sh_template.path, output_dir=tmp_path / "shell",
-             cli_values={"projectName": "shell"},
-             interactive=False)
+    generate(
+        template_dir=gw_template.path,
+        output_dir=tmp_path / "gw",
+        cli_values={"projectName": "my-gw", "groupId": "com.t", "basePackage": "com.t.gw"},
+        interactive=False,
+    )
+    generate(
+        template_dir=sh_template.path,
+        output_dir=tmp_path / "shell",
+        cli_values={"projectName": "shell"},
+        interactive=False,
+    )
 
     projects = _scan_workspace(tmp_path)
     compose = _build_compose(projects, tmp_path)

@@ -19,12 +19,17 @@ TEMPLATE_BASE = Path(__file__).parent.parent / "src" / "apps_generator" / "templ
 
 # ── Translation key completeness ─────────────────────────────────────────────
 
+
 def _load_locale(template_name: str, lang: str) -> dict:
     """Load a locale JSON file from a template."""
     if template_name == "platform_shell":
-        path = TEMPLATE_BASE / "platform_shell" / "files" / "__projectName__" / "src" / "i18n" / "locales" / f"{lang}.json"
+        path = (
+            TEMPLATE_BASE / "platform_shell" / "files" / "__projectName__" / "src" / "i18n" / "locales" / f"{lang}.json"
+        )
     elif template_name == "frontend_app":
-        path = TEMPLATE_BASE / "frontend_app" / "files" / "__projectName__" / "src" / "i18n" / "locales" / f"{lang}.json"
+        path = (
+            TEMPLATE_BASE / "frontend_app" / "files" / "__projectName__" / "src" / "i18n" / "locales" / f"{lang}.json"
+        )
     else:
         return {}
     if not path.exists():
@@ -75,11 +80,24 @@ def test_shell_has_essential_keys():
     """Platform-shell EN locale has all essential UI keys."""
     en = _load_locale("platform_shell", "en")
     essential = [
-        "welcome", "home", "signIn", "signOut", "organization",
-        "loading", "loadingModule", "selectOrganization",
-        "errorTitle", "tryAgain", "pageNotFound",
-        "previous", "next", "create", "creating", "createdSuccessfully",
-        "noDataFound", "failedToLoad",
+        "welcome",
+        "home",
+        "signIn",
+        "signOut",
+        "organization",
+        "loading",
+        "loadingModule",
+        "selectOrganization",
+        "errorTitle",
+        "tryAgain",
+        "pageNotFound",
+        "previous",
+        "next",
+        "create",
+        "creating",
+        "createdSuccessfully",
+        "noDataFound",
+        "failedToLoad",
     ]
     missing = [k for k in essential if k not in en]
     assert not missing, f"Missing essential keys in shell EN: {missing}"
@@ -89,15 +107,24 @@ def test_frontend_has_essential_keys():
     """Frontend-app EN locale has all essential UI keys."""
     en = _load_locale("frontend_app", "en")
     essential = [
-        "title", "welcome", "pageNotFound", "loading",
-        "previous", "next", "create", "creating", "createdSuccessfully",
-        "noDataFound", "failedToLoad",
+        "title",
+        "welcome",
+        "pageNotFound",
+        "loading",
+        "previous",
+        "next",
+        "create",
+        "creating",
+        "createdSuccessfully",
+        "noDataFound",
+        "failedToLoad",
     ]
     missing = [k for k in essential if k not in en]
     assert not missing, f"Missing essential keys in frontend EN: {missing}"
 
 
 # ── No hardcoded English in generated shell ──────────────────────────────────
+
 
 def test_shell_header_uses_i18n(tmp_path: Path):
     """Shell Header component uses t() and has no hardcoded English strings."""
@@ -161,6 +188,7 @@ def test_frontend_app_uses_i18n(tmp_path: Path):
 
 # ── Generated pages use i18n ─────────────────────────────────────────────────
 
+
 def test_generated_list_page_uses_i18n(tmp_path: Path):
     """Generated list pages use t() for UI strings."""
     from apps_generator.cli.generators.pages import parse_pages, find_project_root, generate_page_components
@@ -173,7 +201,9 @@ def test_generated_list_page_uses_i18n(tmp_path: Path):
         interactive=False,
     )
     root = find_project_root(result, "test-fe2")
-    pages = parse_pages('[{"path":"list","label":"Items","resource":"item","type":"list","fields":[{"name":"name","type":"string"}]}]')
+    pages = parse_pages(
+        '[{"path":"list","label":"Items","resource":"item","type":"list","fields":[{"name":"name","type":"string"}]}]'
+    )
     generate_page_components(root, pages, "test-fe2")
 
     content = (root / "src" / "routes" / "ListPage.tsx").read_text()

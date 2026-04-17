@@ -20,6 +20,7 @@ def _gen_shell(tmp_path: Path, name: str = "my-shell") -> Path:
 
 # ── ErrorBoundary ────────────────────────────────────────────────────────────
 
+
 def test_shell_has_error_boundary(tmp_path: Path):
     """ErrorBoundary is always generated in the shell template."""
     result = _gen_shell(tmp_path)
@@ -42,6 +43,7 @@ def test_error_boundary_wired_in_main(tmp_path: Path):
 
 # ── ToastProvider without ui-kit ─────────────────────────────────────────────
 
+
 def test_toast_provider_builtin_version(tmp_path: Path):
     """Without --uikit, shell gets a self-contained toast (no external imports)."""
     result = _gen_shell(tmp_path)
@@ -59,7 +61,7 @@ def test_toast_provider_builtin_version(tmp_path: Path):
     assert "ToastProvider" in content
     assert "createContext" in content
     assert "createPortal" in content
-    assert "role=\"alert\"" in content
+    assert 'role="alert"' in content
 
 
 def test_toast_provider_builtin_has_variants(tmp_path: Path):
@@ -76,6 +78,7 @@ def test_toast_provider_builtin_has_variants(tmp_path: Path):
 
 
 # ── ToastProvider with ui-kit ────────────────────────────────────────────────
+
 
 def test_toast_provider_uikit_version(tmp_path: Path):
     """With --uikit, shell imports Toaster/useToast from the ui-kit package."""
@@ -110,6 +113,7 @@ def test_toast_provider_not_overwritten(tmp_path: Path):
 
 # ── ui-kit Toast component ───────────────────────────────────────────────────
 
+
 def test_uikit_has_toast_components(tmp_path: Path):
     """ui-kit template generates Toast and Toaster components."""
     template = resolve_template("ui-kit")
@@ -143,6 +147,7 @@ def test_uikit_has_toast_components(tmp_path: Path):
 
 
 # ── Integration: shell with --uikit ──────────────────────────────────────────
+
 
 def test_shell_with_uikit_gets_uikit_toast(tmp_path: Path):
     """Full integration: generate shell + uikit, link them, verify toast imports from uikit."""

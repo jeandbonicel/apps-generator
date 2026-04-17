@@ -121,7 +121,11 @@ def derive_variants(params: dict[str, Any], derived_configs: list[dict]) -> dict
 
     for config in derived_configs:
         source = config.get("source", "") if isinstance(config, dict) else config.source
-        variants = config.get("variants", ["camel", "pascal", "snake", "kebab"]) if isinstance(config, dict) else config.variants
+        variants = (
+            config.get("variants", ["camel", "pascal", "snake", "kebab"])
+            if isinstance(config, dict)
+            else config.variants
+        )
         value = params.get(source, "")
 
         if not value:

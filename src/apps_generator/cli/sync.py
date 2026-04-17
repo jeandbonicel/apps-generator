@@ -17,12 +17,8 @@ sync_app = typer.Typer(name="sync", help="Sync API types between backend and fro
 
 @sync_app.command("types")
 def sync_types(
-    from_url: str = typer.Option(
-        ..., "--from", help="OpenAPI spec URL (e.g., http://localhost:8082/v3/api-docs)."
-    ),
-    to: Path = typer.Option(
-        ..., "--to", help="Path to the api-client project."
-    ),
+    from_url: str = typer.Option(..., "--from", help="OpenAPI spec URL (e.g., http://localhost:8082/v3/api-docs)."),
+    to: Path = typer.Option(..., "--to", help="Path to the api-client project."),
 ) -> None:
     """Regenerate TypeScript types from a live backend's OpenAPI specification.
 

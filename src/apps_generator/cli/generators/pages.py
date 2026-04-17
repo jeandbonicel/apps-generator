@@ -69,14 +69,14 @@ def generate_page_components(project_root: Path, pages: list[dict], project_name
                 write_dashboard_page(page_file, component_name, label, resource, fields, uikit_name)
             else:
                 page_file.write_text(
-                    f'export function {component_name}() {{\n'
-                    f'  return (\n'
+                    f"export function {component_name}() {{\n"
+                    f"  return (\n"
                     f'    <div className="p-6">\n'
                     f'      <h1 className="text-2xl font-bold mb-4">{label}</h1>\n'
                     f'      <p className="text-gray-600">This is the {label} page of {title_case(project_name)}.</p>\n'
-                    f'    </div>\n'
-                    f'  );\n'
-                    f'}}\n'
+                    f"    </div>\n"
+                    f"  );\n"
+                    f"}}\n"
                 )
             console.print(f"  Created page: src/routes/{component_name}.tsx")
 
@@ -94,7 +94,12 @@ def generate_page_components(project_root: Path, pages: list[dict], project_name
 
 
 def write_list_page(
-    dest: Path, component: str, label: str, resource: str, fields: list[dict], uikit_name: str = "",
+    dest: Path,
+    component: str,
+    label: str,
+    resource: str,
+    fields: list[dict],
+    uikit_name: str = "",
 ) -> None:
     """Generate a list page with useApiClient + useQuery table."""
     entity = pascal_case(resource)
@@ -103,7 +108,7 @@ def write_list_page(
     # ui-kit imports
     if ui:
         ui_import = (
-            f'import {{ Button, Card, CardContent, CardHeader, CardTitle, '
+            f"import {{ Button, Card, CardContent, CardHeader, CardTitle, "
             f'Table, TableHeader, TableBody, TableHead, TableRow, TableCell }} from "{ui}";\n'
         )
     else:
@@ -111,15 +116,9 @@ def write_list_page(
 
     # Table headers
     if ui:
-        headers = "\n".join(
-            f'              <TableHead>{title_case(f["name"])}</TableHead>'
-            for f in fields
-        )
+        headers = "\n".join(f"              <TableHead>{title_case(f['name'])}</TableHead>" for f in fields)
     else:
-        headers = "\n".join(
-            f'              <th className="p-2 text-left">{title_case(f["name"])}</th>'
-            for f in fields
-        )
+        headers = "\n".join(f'              <th className="p-2 text-left">{title_case(f["name"])}</th>' for f in fields)
 
     # Table cells
     cols = []
@@ -129,27 +128,37 @@ def write_list_page(
         tag = "TableCell" if ui else 'td className="p-2"'
         close_tag = "TableCell" if ui else "td"
         if ft == "decimal":
-            cols.append(f'              <{tag}>${{p.{fname}.toFixed(2)}}</{close_tag}>')
+            cols.append(f"              <{tag}>${{p.{fname}.toFixed(2)}}</{close_tag}>")
         elif ft == "boolean":
             cols.append(f'              <{tag}>{{p.{fname} ? "Yes" : "No"}}</{close_tag}>')
         else:
-            cols.append(f'              <{tag}>{{p.{fname}}}</{close_tag}>')
+            cols.append(f"              <{tag}>{{p.{fname}}}</{close_tag}>")
     cells = "\n".join(cols)
 
     # Button element
-    btn_prev = '<Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page === 0}>{t("previous")}</Button>' if ui else '<button className="px-3 py-1 border rounded text-sm disabled:opacity-50" onClick={() => setPage(p => p - 1)} disabled={page === 0}>{t("previous")}</button>'
-    btn_next = '<Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page >= totalPages - 1}>{t("next")}</Button>' if ui else '<button className="px-3 py-1 border rounded text-sm disabled:opacity-50" onClick={() => setPage(p => p + 1)} disabled={page >= totalPages - 1}>{t("next")}</button>'
+    btn_prev = (
+        '<Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page === 0}>{t("previous")}</Button>'
+        if ui
+        else '<button className="px-3 py-1 border rounded text-sm disabled:opacity-50" onClick={() => setPage(p => p - 1)} disabled={page === 0}>{t("previous")}</button>'
+    )
+    btn_next = (
+        '<Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page >= totalPages - 1}>{t("next")}</Button>'
+        if ui
+        else '<button className="px-3 py-1 border rounded text-sm disabled:opacity-50" onClick={() => setPage(p => p + 1)} disabled={page >= totalPages - 1}>{t("next")}</button>'
+    )
 
     # Table wrapper
     if ui:
         table_open = f"      <Card>\n        <CardHeader>\n          <CardTitle>{label} ({{data?.totalElements ?? 0}})</CardTitle>\n        </CardHeader>\n        <CardContent>\n          <Table>\n            <TableHeader>\n              <TableRow>"
         table_head_close = "              </TableRow>\n            </TableHeader>\n            <TableBody>"
-        row_open = '              <TableRow key={p.id}>'
+        row_open = "              <TableRow key={p.id}>"
         row_close = "              </TableRow>"
         empty_row = f'              <TableRow><TableCell colSpan={{{len(fields)}}} className="text-center text-muted-foreground py-8">{{t("noDataFound")}}</TableCell></TableRow>'
         table_close = "            </TableBody>\n          </Table>\n        </CardContent>\n      </Card>"
     else:
-        table_open = '      <table className="w-full border-collapse">\n        <thead>\n          <tr className="border-b">'
+        table_open = (
+            '      <table className="w-full border-collapse">\n        <thead>\n          <tr className="border-b">'
+        )
         table_head_close = "          </tr>\n        </thead>\n        <tbody>"
         row_open = '            <tr key={p.id} className="border-b">'
         row_close = "            </tr>"
@@ -162,14 +171,14 @@ def write_list_page(
         f'import {{ useQuery }} from "@tanstack/react-query";\n'
         f'import {{ useApiClient }} from "my-api-client/react";\n'
         f'import type {{ {entity}, PageResponse }} from "my-api-client";\n'
-        f'{ui_import}'
+        f"{ui_import}"
         f"\n"
         f"export function {component}() {{\n"
         f"  const {{ t }} = useTranslation();\n"
         f"  const api = useApiClient();\n"
         f"  const [page, setPage] = useState(0);\n"
         f"\n"
-        f'  const {{ data, isLoading, error }} = useQuery<PageResponse<{entity}>>({{  \n'
+        f"  const {{ data, isLoading, error }} = useQuery<PageResponse<{entity}>>({{  \n"
         f'    queryKey: ["{resource}", page],\n'
         f'    queryFn: () => api.get<PageResponse<{entity}>>("/{resource}", {{ params: {{ page: String(page), size: "20" }} }}),\n'
         f"  }});\n"
@@ -182,11 +191,14 @@ def write_list_page(
         f"\n"
         f"  return (\n"
         f'    <div className="space-y-4">\n'
-        + (f"{table_open}\n" if ui else
-           f'      <div className="flex items-center justify-between">\n'
-           f'        <h1 className="text-2xl font-bold tracking-tight">{label} ({{data?.totalElements ?? 0}})</h1>\n'
-           f"      </div>\n"
-           f"{table_open}\n")
+        + (
+            f"{table_open}\n"
+            if ui
+            else f'      <div className="flex items-center justify-between">\n'
+            f'        <h1 className="text-2xl font-bold tracking-tight">{label} ({{data?.totalElements ?? 0}})</h1>\n'
+            f"      </div>\n"
+            f"{table_open}\n"
+        )
         + f"{headers}\n"
         f"{table_head_close}\n"
         f"          {{items.map((p) => (\n"
@@ -210,7 +222,12 @@ def write_list_page(
 
 
 def write_form_page(
-    dest: Path, component: str, label: str, resource: str, fields: list[dict], uikit_name: str = "",
+    dest: Path,
+    component: str,
+    label: str,
+    resource: str,
+    fields: list[dict],
+    uikit_name: str = "",
 ) -> None:
     """Generate a form page with useApiClient + useMutation."""
     entity = pascal_case(resource)
@@ -234,7 +251,7 @@ def write_form_page(
         else:
             defaults[fname] = '""'
 
-    state_init = ", ".join(f'{k}: {v}' for k, v in defaults.items())
+    state_init = ", ".join(f"{k}: {v}" for k, v in defaults.items())
 
     # Build form inputs
     inputs = []
@@ -252,7 +269,7 @@ def write_form_page(
                     f'        <div className="space-y-2">\n'
                     f'          <Label htmlFor="{fname}">{flabel}{req_star}</Label>\n'
                     f'          <Textarea id="{fname}" rows={{3}}\n'
-                    f'            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{"required " if required else ""}/>\n'
+                    f"            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{'required ' if required else ''}/>\n"
                     f"        </div>"
                 )
             elif ft == "boolean":
@@ -267,7 +284,7 @@ def write_form_page(
                     f'        <div className="space-y-2">\n'
                     f'          <Label htmlFor="{fname}">{flabel}{req_star}</Label>\n'
                     f'          <Input id="{fname}" type="date"\n'
-                    f'            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{"required " if required else ""}/>\n'
+                    f"            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{'required ' if required else ''}/>\n"
                     f"        </div>"
                 )
             elif ft in ("integer", "long"):
@@ -275,7 +292,7 @@ def write_form_page(
                     f'        <div className="space-y-2">\n'
                     f'          <Label htmlFor="{fname}">{flabel}{req_star}</Label>\n'
                     f'          <Input id="{fname}" type="number"\n'
-                    f'            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{"required " if required else ""}/>\n'
+                    f"            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{'required ' if required else ''}/>\n"
                     f"        </div>"
                 )
             elif ft == "decimal":
@@ -283,7 +300,7 @@ def write_form_page(
                     f'        <div className="space-y-2">\n'
                     f'          <Label htmlFor="{fname}">{flabel}{req_star}</Label>\n'
                     f'          <Input id="{fname}" type="number" step="0.01"\n'
-                    f'            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{"required " if required else ""}/>\n'
+                    f"            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{'required ' if required else ''}/>\n"
                     f"        </div>"
                 )
             else:
@@ -291,17 +308,17 @@ def write_form_page(
                     f'        <div className="space-y-2">\n'
                     f'          <Label htmlFor="{fname}">{flabel}{req_star}</Label>\n'
                     f'          <Input id="{fname}" type="text"\n'
-                    f'            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{"required " if required else ""}/>\n'
+                    f"            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{'required ' if required else ''}/>\n"
                     f"        </div>"
                 )
         else:
             # Plain HTML fallback
             if ft == "text":
                 inputs.append(
-                    f'        <div>\n'
+                    f"        <div>\n"
                     f'          <label className="text-sm font-medium" htmlFor="{fname}">{flabel}{req_star}</label>\n'
                     f'          <textarea id="{fname}" className="mt-1 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm" rows={{3}}\n'
-                    f'            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{"required " if required else ""}/>\n'
+                    f"            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{'required ' if required else ''}/>\n"
                     f"        </div>"
                 )
             elif ft == "boolean":
@@ -315,10 +332,10 @@ def write_form_page(
                 input_type = "number" if ft in ("integer", "long", "decimal") else "date" if ft == "date" else "text"
                 step = ' step="0.01"' if ft == "decimal" else ""
                 inputs.append(
-                    f'        <div>\n'
+                    f"        <div>\n"
                     f'          <label className="text-sm font-medium" htmlFor="{fname}">{flabel}{req_star}</label>\n'
                     f'          <input id="{fname}" type="{input_type}"{step} className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"\n'
-                    f'            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{"required " if required else ""}/>\n'
+                    f"            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{'required ' if required else ''}/>\n"
                     f"        </div>"
                 )
 
@@ -356,23 +373,23 @@ def write_form_page(
     if ui:
         form_open = (
             f'      <Card className="max-w-xl">\n'
-            f'        <CardHeader>\n'
-            f'          <CardTitle>{label}</CardTitle>\n'
-            f'        </CardHeader>\n'
-            f'        <CardContent>\n'
-            f'{success_msg}\n'
-            f'{error_msg}\n'
+            f"        <CardHeader>\n"
+            f"          <CardTitle>{label}</CardTitle>\n"
+            f"        </CardHeader>\n"
+            f"        <CardContent>\n"
+            f"{success_msg}\n"
+            f"{error_msg}\n"
             f'          <form onSubmit={{handleSubmit}} className="space-y-4">'
         )
-        form_close = f'{submit_btn}\n          </form>\n        </CardContent>\n      </Card>'
+        form_close = f"{submit_btn}\n          </form>\n        </CardContent>\n      </Card>"
     else:
         form_open = (
             f'      <h1 className="text-2xl font-bold tracking-tight mb-4">{label}</h1>\n'
-            f'{success_msg}\n'
-            f'{error_msg}\n'
+            f"{success_msg}\n"
+            f"{error_msg}\n"
             f'      <form onSubmit={{handleSubmit}} className="max-w-xl space-y-6">'
         )
-        form_close = f'{submit_btn}\n      </form>'
+        form_close = f"{submit_btn}\n      </form>"
 
     dest.write_text(
         f'import {{ useState }} from "react";\n'
@@ -380,7 +397,7 @@ def write_form_page(
         f'import {{ useMutation, useQueryClient }} from "@tanstack/react-query";\n'
         f'import {{ useApiClient }} from "my-api-client/react";\n'
         f'import type {{ Create{entity}Request, {entity} }} from "my-api-client";\n'
-        f'{ui_import}'
+        f"{ui_import}"
         f"\n"
         f"export function {component}() {{\n"
         f"  const {{ t }} = useTranslation();\n"
@@ -419,7 +436,12 @@ def write_form_page(
 
 
 def write_dashboard_page(
-    dest: Path, component: str, label: str, resource: str, fields: list[dict], uikit_name: str = "",
+    dest: Path,
+    component: str,
+    label: str,
+    resource: str,
+    fields: list[dict],
+    uikit_name: str = "",
 ) -> None:
     """Generate a dashboard page with stat cards + bar chart + recent items table."""
     entity = pascal_case(resource)
@@ -445,7 +467,9 @@ def write_dashboard_page(
     if ui:
         ui_imports += f'import {{ Card, CardContent, CardHeader, CardTitle, Table, TableHeader, TableBody, TableHead, TableRow, TableCell }} from "{ui}";\n'
         if chart_field:
-            ui_imports += f'import {{ ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig }} from "{ui}";\n'
+            ui_imports += (
+                f'import {{ ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig }} from "{ui}";\n'
+            )
             ui_imports += 'import { Bar, BarChart, XAxis, YAxis, CartesianGrid } from "recharts";\n'
 
     # Recent items table (first 3 fields)
@@ -454,90 +478,92 @@ def write_dashboard_page(
     td_tag = "TableCell" if ui else 'td className="px-4 py-4"'
     th_close = "TableHead" if ui else "th"
     td_close = "TableCell" if ui else "td"
-    headers = "\n".join(f'                <{th_tag}>{title_case(f["name"])}</{th_close}>' for f in display_fields)
-    cells = "\n".join(f'                <{td_tag}>{{item.{camel_case(f["name"])}}}</{td_close}>' for f in display_fields)
+    headers = "\n".join(f"                <{th_tag}>{title_case(f['name'])}</{th_close}>" for f in display_fields)
+    cells = "\n".join(
+        f"                <{td_tag}>{{item.{camel_case(f['name'])}}}</{td_close}>" for f in display_fields
+    )
 
     # Chart data code
     chart_data_code = ""
     if chart_field:
         chart_data_code = (
-            f'  const chartData = React.useMemo(() => {{\n'
-            f'    const groups: Record<string, number> = {{}};\n'
-            f'    for (const item of allItems) {{\n'
+            f"  const chartData = React.useMemo(() => {{\n"
+            f"    const groups: Record<string, number> = {{}};\n"
+            f"    for (const item of allItems) {{\n"
             f'      const key = String(item.{group_fname} ?? "Other");\n'
-            f'      groups[key] = (groups[key] ?? 0) + Number(item.{chart_fname} ?? 0);\n'
-            f'    }}\n'
-            f'    return Object.entries(groups).map(([label, value]) => ({{ label, value }}));\n'
-            f'  }}, [allItems]);\n'
-            f'\n'
-            f'  const chartConfig: ChartConfig = {{\n'
+            f"      groups[key] = (groups[key] ?? 0) + Number(item.{chart_fname} ?? 0);\n"
+            f"    }}\n"
+            f"    return Object.entries(groups).map(([label, value]) => ({{ label, value }}));\n"
+            f"  }}, [allItems]);\n"
+            f"\n"
+            f"  const chartConfig: ChartConfig = {{\n"
             f'    value: {{ label: "{chart_label}", color: "hsl(var(--chart-1))" }},\n'
-            f'  }};\n'
+            f"  }};\n"
         )
 
     # Chart section
     chart_section = ""
     if chart_field and ui:
         chart_section = (
-            f'      <Card>\n'
-            f'        <CardHeader>\n'
-            f'          <CardTitle>{chart_label} by {group_label}</CardTitle>\n'
-            f'        </CardHeader>\n'
-            f'        <CardContent>\n'
+            f"      <Card>\n"
+            f"        <CardHeader>\n"
+            f"          <CardTitle>{chart_label} by {group_label}</CardTitle>\n"
+            f"        </CardHeader>\n"
+            f"        <CardContent>\n"
             f'          <ChartContainer config={{chartConfig}} className="h-[300px]">\n'
-            f'            <BarChart data={{chartData}}>\n'
+            f"            <BarChart data={{chartData}}>\n"
             f'              <CartesianGrid strokeDasharray="3 3" />\n'
             f'              <XAxis dataKey="label" />\n'
-            f'              <YAxis />\n'
-            f'              <ChartTooltip content={{<ChartTooltipContent />}} />\n'
+            f"              <YAxis />\n"
+            f"              <ChartTooltip content={{<ChartTooltipContent />}} />\n"
             f'              <Bar dataKey="value" fill="var(--color-value)" radius={{[4, 4, 0, 0]}} />\n'
-            f'            </BarChart>\n'
-            f'          </ChartContainer>\n'
-            f'        </CardContent>\n'
-            f'      </Card>\n'
+            f"            </BarChart>\n"
+            f"          </ChartContainer>\n"
+            f"        </CardContent>\n"
+            f"      </Card>\n"
         )
 
     # Stat card helper
     def stat_card(stat_label: str, value_expr: str) -> str:
         if ui:
             return (
-                f'        <Card>\n'
+                f"        <Card>\n"
                 f'          <CardHeader className="pb-2">\n'
                 f'            <CardTitle className="text-sm font-medium text-muted-foreground">{stat_label}</CardTitle>\n'
-                f'          </CardHeader>\n'
-                f'          <CardContent>\n'
+                f"          </CardHeader>\n"
+                f"          <CardContent>\n"
                 f'            <p className="text-3xl font-bold">{{{value_expr}}}</p>\n'
-                f'          </CardContent>\n'
-                f'        </Card>'
+                f"          </CardContent>\n"
+                f"        </Card>"
             )
         else:
             return (
                 f'        <div className="rounded-lg border bg-card p-6">\n'
                 f'          <p className="text-sm text-muted-foreground">{stat_label}</p>\n'
                 f'          <p className="text-3xl font-bold">{{{value_expr}}}</p>\n'
-                f'        </div>'
+                f"        </div>"
             )
 
     # Recent items table wrapper
     if ui:
         table_block = (
-            f'      <Card>\n'
-            f'        <CardHeader>\n'
-            f'          <CardTitle>Recent {title_case(resource)}s</CardTitle>\n'
-            f'        </CardHeader>\n'
-            f'        <CardContent>\n'
-            f'          <Table>\n'
-            f'            <TableHeader>\n'
-            f'              <TableRow>\n{headers}\n              </TableRow>\n'
-            f'            </TableHeader>\n'
-            f'            <TableBody>\n'
-            f'              {{recentItems.map((item) => (\n'
-            f'                <TableRow key={{item.id}}>\n{cells}\n                </TableRow>\n'
-            f'              ))}}\n'
-            f'            </TableBody>\n'
-            f'          </Table>\n'
-            f'        </CardContent>\n'
-            f'      </Card>'
+            f"      <Card>\n"
+            f"        <CardHeader>\n"
+            f"          <CardTitle>Recent {title_case(resource)}s</CardTitle>\n"
+            f"        </CardHeader>\n"
+            f"        <CardContent>\n"
+            f"          <Table>\n"
+            f"            <TableHeader>\n"
+            f"              <TableRow>\n{headers}\n              </TableRow>\n"
+            f"            </TableHeader>\n"
+            f"            <TableBody>\n"
+            f"              {{recentItems.map((item) => (\n"
+            f"                <TableRow key={{item.id}}>\n{cells}\n                </TableRow>\n"
+            f"              ))}}\n"
+            f"            </TableBody>\n"
+            f"          </Table>\n"
+            f"        </CardContent>\n"
+            f"      </Card>"
         )
     else:
         table_block = (
@@ -545,11 +571,11 @@ def write_dashboard_page(
             f'        <h3 className="p-4 font-semibold">Recent {title_case(resource)}s</h3>\n'
             f'        <table className="w-full">\n'
             f'          <thead><tr className="border-b">\n{headers}\n          </tr></thead>\n'
-            f'          <tbody>{{recentItems.map((item) => (\n'
+            f"          <tbody>{{recentItems.map((item) => (\n"
             f'            <tr key={{item.id}} className="border-b">\n{cells}\n            </tr>\n'
-            f'          ))}}</tbody>\n'
-            f'        </table>\n'
-            f'      </div>'
+            f"          ))}}</tbody>\n"
+            f"        </table>\n"
+            f"      </div>"
         )
 
     dest.write_text(
@@ -557,12 +583,12 @@ def write_dashboard_page(
         f'import {{ useQuery }} from "@tanstack/react-query";\n'
         f'import {{ useApiClient }} from "my-api-client/react";\n'
         f'import type {{ {entity}, PageResponse }} from "my-api-client";\n'
-        f'{ui_imports}'
+        f"{ui_imports}"
         f"\n"
         f"export function {component}() {{\n"
         f"  const api = useApiClient();\n"
         f"\n"
-        f'  const {{ data, isLoading, error }} = useQuery<PageResponse<{entity}>>({{  \n'
+        f"  const {{ data, isLoading, error }} = useQuery<PageResponse<{entity}>>({{  \n"
         f'    queryKey: ["{resource}", "dashboard"],\n'
         f'    queryFn: () => api.get<PageResponse<{entity}>>("/{resource}", {{ params: {{ page: "0", size: "100" }} }}),\n'
         f"  }});\n"

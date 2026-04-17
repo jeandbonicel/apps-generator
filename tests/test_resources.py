@@ -11,6 +11,7 @@ from apps_generator.cli.generators.linking import find_java_root, find_resources
 
 # ── Parsing ──────────────────────────────────────────────────────────────────
 
+
 def test_parse_resources_valid():
     resources = parse_resources('[{"name":"product","fields":[{"name":"name","type":"string"}]}]')
     assert len(resources) == 1
@@ -39,6 +40,7 @@ def test_parse_resources_not_a_list():
 
 
 # ── Path helpers ─────────────────────────────────────────────────────────────
+
 
 def test_find_java_root(tmp_path: Path):
     template = resolve_template("api-domain")
@@ -69,6 +71,7 @@ def test_find_resources_root(tmp_path: Path):
 
 # ── Full resource scaffolding ────────────────────────────────────────────────
 
+
 def _generate_with_resource(tmp_path: Path, resource_json: str) -> tuple[Path, Path, Path]:
     """Helper: generate an api-domain project with resources and return (project_dir, java_root, res_root)."""
     template = resolve_template("api-domain")
@@ -94,7 +97,9 @@ def _generate_with_resource(tmp_path: Path, resource_json: str) -> tuple[Path, P
 
 
 def test_resource_generates_entity(tmp_path: Path):
-    _, java_root, _ = _generate_with_resource(tmp_path, '[{"name":"product","fields":[{"name":"name","type":"string","required":true}]}]')
+    _, java_root, _ = _generate_with_resource(
+        tmp_path, '[{"name":"product","fields":[{"name":"name","type":"string","required":true}]}]'
+    )
 
     entity = java_root / "domain" / "model" / "Product.java"
     assert entity.exists()
@@ -107,7 +112,9 @@ def test_resource_generates_entity(tmp_path: Path):
 
 
 def test_resource_generates_repository(tmp_path: Path):
-    _, java_root, _ = _generate_with_resource(tmp_path, '[{"name":"product","fields":[{"name":"name","type":"string"}]}]')
+    _, java_root, _ = _generate_with_resource(
+        tmp_path, '[{"name":"product","fields":[{"name":"name","type":"string"}]}]'
+    )
 
     repo = java_root / "domain" / "repository" / "ProductRepository.java"
     assert repo.exists()
@@ -118,7 +125,9 @@ def test_resource_generates_repository(tmp_path: Path):
 
 
 def test_resource_generates_service_with_tenant_isolation(tmp_path: Path):
-    _, java_root, _ = _generate_with_resource(tmp_path, '[{"name":"product","fields":[{"name":"name","type":"string"}]}]')
+    _, java_root, _ = _generate_with_resource(
+        tmp_path, '[{"name":"product","fields":[{"name":"name","type":"string"}]}]'
+    )
 
     service = java_root / "domain" / "service" / "ProductService.java"
     assert service.exists()
@@ -131,7 +140,9 @@ def test_resource_generates_service_with_tenant_isolation(tmp_path: Path):
 
 
 def test_resource_generates_controller(tmp_path: Path):
-    _, java_root, _ = _generate_with_resource(tmp_path, '[{"name":"product","fields":[{"name":"name","type":"string"}]}]')
+    _, java_root, _ = _generate_with_resource(
+        tmp_path, '[{"name":"product","fields":[{"name":"name","type":"string"}]}]'
+    )
 
     ctrl = java_root / "interfaces" / "rest" / "ProductController.java"
     assert ctrl.exists()
@@ -147,7 +158,10 @@ def test_resource_generates_controller(tmp_path: Path):
 
 
 def test_resource_generates_dtos(tmp_path: Path):
-    _, java_root, _ = _generate_with_resource(tmp_path, '[{"name":"product","fields":[{"name":"name","type":"string","required":true},{"name":"price","type":"decimal","required":true}]}]')
+    _, java_root, _ = _generate_with_resource(
+        tmp_path,
+        '[{"name":"product","fields":[{"name":"name","type":"string","required":true},{"name":"price","type":"decimal","required":true}]}]',
+    )
 
     dto_dir = java_root / "interfaces" / "rest" / "dto"
     assert (dto_dir / "CreateProductRequest.java").exists()
@@ -156,7 +170,7 @@ def test_resource_generates_dtos(tmp_path: Path):
 
     create_dto = (dto_dir / "CreateProductRequest.java").read_text()
     assert "@NotBlank" in create_dto  # string + required
-    assert "@NotNull" in create_dto   # decimal + required
+    assert "@NotNull" in create_dto  # decimal + required
     assert "BigDecimal" in create_dto
 
     response_dto = (dto_dir / "ProductResponse.java").read_text()
@@ -166,22 +180,28 @@ def test_resource_generates_dtos(tmp_path: Path):
 
 
 def test_resource_generates_migration(tmp_path: Path):
-    _, _, res_root = _generate_with_resource(tmp_path, '[{"name":"product","fields":[{"name":"name","type":"string","required":true},{"name":"sku","type":"string","unique":true}]}]')
+    _, _, res_root = _generate_with_resource(
+        tmp_path,
+        '[{"name":"product","fields":[{"name":"name","type":"string","required":true},{"name":"sku","type":"string","unique":true}]}]',
+    )
 
     migration = res_root / "db" / "changelog" / "changes" / "002-create-product.yaml"
     assert migration.exists()
     content = migration.read_text()
-    assert "products" in content       # table name
-    assert "tenant_id" in content      # tenant column
-    assert "created_at" in content     # audit column
+    assert "products" in content  # table name
+    assert "tenant_id" in content  # tenant column
+    assert "created_at" in content  # audit column
     assert "idx_products_tenant_id" in content  # index
     assert "uq_products_sku" in content  # unique constraint
 
 
 def test_resource_updates_master_changelog(tmp_path: Path):
-    _, _, res_root = _generate_with_resource(tmp_path, '[{"name":"product","fields":[{"name":"name","type":"string"}]}]')
+    _, _, res_root = _generate_with_resource(
+        tmp_path, '[{"name":"product","fields":[{"name":"name","type":"string"}]}]'
+    )
 
     import yaml
+
     master = res_root / "db" / "changelog" / "db.changelog-master.yaml"
     data = yaml.safe_load(master.read_text())
     files = [e["include"]["file"] for e in data["databaseChangeLog"] if "include" in e]
@@ -190,14 +210,21 @@ def test_resource_updates_master_changelog(tmp_path: Path):
 
 def test_resource_validation_annotations(tmp_path: Path):
     """Field constraints map to correct Java validation annotations."""
-    _, java_root, _ = _generate_with_resource(tmp_path, json.dumps([{
-        "name": "item",
-        "fields": [
-            {"name": "title", "type": "string", "required": True, "maxLength": 200, "minLength": 3},
-            {"name": "count", "type": "integer", "min": 0, "max": 1000},
-            {"name": "email", "type": "string", "pattern": "^[\\w@.]+$"},
-        ]
-    }]))
+    _, java_root, _ = _generate_with_resource(
+        tmp_path,
+        json.dumps(
+            [
+                {
+                    "name": "item",
+                    "fields": [
+                        {"name": "title", "type": "string", "required": True, "maxLength": 200, "minLength": 3},
+                        {"name": "count", "type": "integer", "min": 0, "max": 1000},
+                        {"name": "email", "type": "string", "pattern": "^[\\w@.]+$"},
+                    ],
+                }
+            ]
+        ),
+    )
 
     create_dto = (java_root / "interfaces" / "rest" / "dto" / "CreateItemRequest.java").read_text()
     assert "@NotBlank" in create_dto
@@ -209,10 +236,15 @@ def test_resource_validation_annotations(tmp_path: Path):
 
 def test_multiple_resources(tmp_path: Path):
     """Multiple resources in one generation create separate files and sequential migrations."""
-    _, java_root, res_root = _generate_with_resource(tmp_path, json.dumps([
-        {"name": "product", "fields": [{"name": "name", "type": "string"}]},
-        {"name": "category", "fields": [{"name": "label", "type": "string"}]},
-    ]))
+    _, java_root, res_root = _generate_with_resource(
+        tmp_path,
+        json.dumps(
+            [
+                {"name": "product", "fields": [{"name": "name", "type": "string"}]},
+                {"name": "category", "fields": [{"name": "label", "type": "string"}]},
+            ]
+        ),
+    )
 
     assert (java_root / "domain" / "model" / "Product.java").exists()
     assert (java_root / "domain" / "model" / "Category.java").exists()
@@ -225,19 +257,26 @@ def test_multiple_resources(tmp_path: Path):
 
 def test_all_field_types(tmp_path: Path):
     """All supported field types generate correct Java types."""
-    _, java_root, _ = _generate_with_resource(tmp_path, json.dumps([{
-        "name": "everything",
-        "fields": [
-            {"name": "a_string", "type": "string"},
-            {"name": "a_text", "type": "text"},
-            {"name": "an_int", "type": "integer"},
-            {"name": "a_long", "type": "long"},
-            {"name": "a_decimal", "type": "decimal"},
-            {"name": "a_bool", "type": "boolean"},
-            {"name": "a_date", "type": "date"},
-            {"name": "a_datetime", "type": "datetime"},
-        ]
-    }]))
+    _, java_root, _ = _generate_with_resource(
+        tmp_path,
+        json.dumps(
+            [
+                {
+                    "name": "everything",
+                    "fields": [
+                        {"name": "a_string", "type": "string"},
+                        {"name": "a_text", "type": "text"},
+                        {"name": "an_int", "type": "integer"},
+                        {"name": "a_long", "type": "long"},
+                        {"name": "a_decimal", "type": "decimal"},
+                        {"name": "a_bool", "type": "boolean"},
+                        {"name": "a_date", "type": "date"},
+                        {"name": "a_datetime", "type": "datetime"},
+                    ],
+                }
+            ]
+        ),
+    )
 
     entity = (java_root / "domain" / "model" / "Everything.java").read_text()
     assert "private String aString;" in entity
@@ -265,7 +304,7 @@ def test_hibernate_tenant_filter_infra(tmp_path: Path):
     # TenantAwareEntity has Hibernate filter
     tenant_entity = (base / "domain" / "model" / "TenantAwareEntity.java").read_text()
     assert "@MappedSuperclass" in tenant_entity
-    assert '@FilterDef' in tenant_entity
+    assert "@FilterDef" in tenant_entity
     assert 'name = "tenantFilter"' in tenant_entity
     assert "tenant_id = :tenantId" in tenant_entity
     assert '@Filter(name = "tenantFilter")' in tenant_entity
@@ -296,7 +335,9 @@ def test_correlation_id_in_backend(tmp_path: Path):
     )
     base = result / "svc"
 
-    web_config = (base / "src" / "main" / "java" / "com" / "test" / "svc" / "infrastructure" / "config" / "WebConfig.java").read_text()
+    web_config = (
+        base / "src" / "main" / "java" / "com" / "test" / "svc" / "infrastructure" / "config" / "WebConfig.java"
+    ).read_text()
     assert "CORRELATION_HEADER" in web_config
     assert "X-Correlation-ID" in web_config
     assert 'MDC.put("correlationId"' in web_config
@@ -305,7 +346,18 @@ def test_correlation_id_in_backend(tmp_path: Path):
     app_yaml = (base / "src" / "main" / "resources" / "application.yaml").read_text()
     assert "%X{correlationId:-}" in app_yaml
 
-    handler = (base / "src" / "main" / "java" / "com" / "test" / "svc" / "infrastructure" / "web" / "GlobalExceptionHandler.java").read_text()
+    handler = (
+        base
+        / "src"
+        / "main"
+        / "java"
+        / "com"
+        / "test"
+        / "svc"
+        / "infrastructure"
+        / "web"
+        / "GlobalExceptionHandler.java"
+    ).read_text()
     assert "correlationId" in handler
 
 
@@ -325,7 +377,7 @@ def test_correlation_id_in_gateway(tmp_path: Path):
     content = filter_file[0].read_text()
     assert "X-Correlation-ID" in content
     assert "UUID.randomUUID()" in content
-    assert 'enableFilter' not in content  # That's the tenant filter, not this one
+    assert "enableFilter" not in content  # That's the tenant filter, not this one
     assert 'MDC.put("correlationId"' in content
 
     app_yaml = (result / "gw" / "src" / "main" / "resources" / "application.yaml").read_text()
@@ -334,13 +386,20 @@ def test_correlation_id_in_gateway(tmp_path: Path):
 
 def test_resource_generates_integration_test(tmp_path: Path):
     """Each resource gets a Testcontainers integration test with CRUD + tenant isolation."""
-    _, java_root, _ = _generate_with_resource(tmp_path, json.dumps([{
-        "name": "product",
-        "fields": [
-            {"name": "name", "type": "string", "required": True},
-            {"name": "price", "type": "decimal", "required": True},
-        ]
-    }]))
+    _, java_root, _ = _generate_with_resource(
+        tmp_path,
+        json.dumps(
+            [
+                {
+                    "name": "product",
+                    "fields": [
+                        {"name": "name", "type": "string", "required": True},
+                        {"name": "price", "type": "decimal", "required": True},
+                    ],
+                }
+            ]
+        ),
+    )
 
     # Test root mirrors java root: src/main/java → src/test/java
     test_root = Path(str(java_root).replace("/main/java/", "/test/java/"))
@@ -350,10 +409,10 @@ def test_resource_generates_integration_test(tmp_path: Path):
 
     # CRUD lifecycle test
     assert "crud_lifecycle" in content
-    assert "post(\"/product\")" in content
-    assert "get(\"/product/\"" in content
-    assert "put(\"/product/\"" in content
-    assert "delete(\"/product/\"" in content
+    assert 'post("/product")' in content
+    assert 'get("/product/"' in content
+    assert 'put("/product/"' in content
+    assert 'delete("/product/"' in content
     assert "status().isCreated()" in content
     assert "status().isNoContent()" in content
     assert "status().isNotFound()" in content
