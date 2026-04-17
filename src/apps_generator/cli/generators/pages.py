@@ -34,7 +34,9 @@ def find_project_root(output_dir: Path, project_name: str) -> Path | None:
     return None
 
 
-def generate_page_components(project_root: Path, pages: list[dict], project_name: str, uikit_name: str = "") -> None:
+def generate_page_components(
+    project_root: Path, pages: list[dict], project_name: str, uikit_name: str = "", api_client_name: str = ""
+) -> None:
     """Generate individual page component files and update pages.ts registry.
 
     Pages with ``resource`` + ``type`` fields generate data-fetching components
@@ -62,11 +64,11 @@ def generate_page_components(project_root: Path, pages: list[dict], project_name
         page_file = routes_dir / f"{component_name}.tsx"
         if not page_file.exists():
             if resource and page_type == "list":
-                write_list_page(page_file, component_name, label, resource, fields, uikit_name)
+                write_list_page(page_file, component_name, label, resource, fields, uikit_name, api_client_name)
             elif resource and page_type == "form":
-                write_form_page(page_file, component_name, label, resource, fields, uikit_name)
+                write_form_page(page_file, component_name, label, resource, fields, uikit_name, api_client_name)
             elif resource and page_type == "dashboard":
-                write_dashboard_page(page_file, component_name, label, resource, fields, uikit_name)
+                write_dashboard_page(page_file, component_name, label, resource, fields, uikit_name, api_client_name)
             else:
                 page_file.write_text(
                     f"export function {component_name}() {{\n"
@@ -100,9 +102,11 @@ def write_list_page(
     resource: str,
     fields: list[dict],
     uikit_name: str = "",
+    api_client_name: str = "",
 ) -> None:
     """Generate a list page with useApiClient + useQuery table."""
     entity = pascal_case(resource)
+    _api_pkg = api_client_name or "my-api-client"
     ui = uikit_name  # shorthand
 
     # ui-kit imports
@@ -169,8 +173,8 @@ def write_list_page(
         f'import {{ useState }} from "react";\n'
         f'import {{ useTranslation }} from "react-i18next";\n'
         f'import {{ useQuery }} from "@tanstack/react-query";\n'
-        f'import {{ useApiClient }} from "my-api-client/react";\n'
-        f'import type {{ {entity}, PageResponse }} from "my-api-client";\n'
+        f'import {{ useApiClient }} from "{_api_pkg}/react";\n'
+        f'import type {{ {entity}, PageResponse }} from "{_api_pkg}";\n'
         f"{ui_import}"
         f"\n"
         f"export function {component}() {{\n"
@@ -228,9 +232,11 @@ def write_form_page(
     resource: str,
     fields: list[dict],
     uikit_name: str = "",
+    api_client_name: str = "",
 ) -> None:
     """Generate a form page with useApiClient + useMutation."""
     entity = pascal_case(resource)
+    _api_pkg = api_client_name or "my-api-client"
     ui = uikit_name
 
     # ui-kit imports
@@ -395,8 +401,8 @@ def write_form_page(
         f'import {{ useState }} from "react";\n'
         f'import {{ useTranslation }} from "react-i18next";\n'
         f'import {{ useMutation, useQueryClient }} from "@tanstack/react-query";\n'
-        f'import {{ useApiClient }} from "my-api-client/react";\n'
-        f'import type {{ Create{entity}Request, {entity} }} from "my-api-client";\n'
+        f'import {{ useApiClient }} from "{_api_pkg}/react";\n'
+        f'import type {{ Create{entity}Request, {entity} }} from "{_api_pkg}";\n'
         f"{ui_import}"
         f"\n"
         f"export function {component}() {{\n"
@@ -442,9 +448,11 @@ def write_dashboard_page(
     resource: str,
     fields: list[dict],
     uikit_name: str = "",
+    api_client_name: str = "",
 ) -> None:
     """Generate a dashboard page with stat cards + bar chart + recent items table."""
     entity = pascal_case(resource)
+    _api_pkg = api_client_name or "my-api-client"
     ui = uikit_name
 
     # Pick a numeric field for the chart and a string field for grouping
@@ -581,8 +589,8 @@ def write_dashboard_page(
     dest.write_text(
         f'import React from "react";\n'
         f'import {{ useQuery }} from "@tanstack/react-query";\n'
-        f'import {{ useApiClient }} from "my-api-client/react";\n'
-        f'import type {{ {entity}, PageResponse }} from "my-api-client";\n'
+        f'import {{ useApiClient }} from "{_api_pkg}/react";\n'
+        f'import type {{ {entity}, PageResponse }} from "{_api_pkg}";\n'
         f"{ui_imports}"
         f"\n"
         f"export function {component}() {{\n"

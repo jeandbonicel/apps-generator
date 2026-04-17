@@ -22,18 +22,18 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: {{ containerRegistry }}
-          username: {% raw %}${{ github.actor }}{% endraw %}
-          password: {% raw %}${{ secrets.GITHUB_TOKEN }}{% endraw %}
+          username: {{ '${{ github.actor }}' }}
+          password: {{ '${{ secrets.GITHUB_TOKEN }}' }}
 
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: {% raw %}${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}{% endraw %}
+          images: {{ '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}' }}
           tags: |
             type=sha
             type=ref,event=branch
-            type=semver,pattern={% raw %}{{version}}{% endraw %}
+            {{ 'type=semver,pattern={{version}}' }}
 
       - name: Build and push
         uses: docker/build-push-action@v5
@@ -41,5 +41,5 @@ jobs:
           context: .
           file: docker/Dockerfile
           push: true
-          tags: {% raw %}${{ steps.meta.outputs.tags }}{% endraw %}
-          labels: {% raw %}${{ steps.meta.outputs.labels }}{% endraw %}
+          tags: {{ '${{ steps.meta.outputs.tags }}' }}
+          labels: {{ '${{ steps.meta.outputs.labels }}' }}

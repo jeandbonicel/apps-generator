@@ -61,7 +61,7 @@ jobs:
         run: npm publish
         env:
 {% if npmRegistry == "github" %}
-          NODE_AUTH_TOKEN: {% raw %}${{ secrets.GITHUB_TOKEN }}{% endraw %}
+          NODE_AUTH_TOKEN: {{ '${{ secrets.GITHUB_TOKEN }}' }}
 {% else %}
-          NODE_AUTH_TOKEN: {% raw %}${{ secrets.NPM_TOKEN }}{% endraw %}
+          NODE_AUTH_TOKEN: {{ '${{ secrets.NPM_TOKEN }}' }}
 {% endif %}

@@ -190,21 +190,26 @@ def _run_hooks(manifest: Any, output_dir: Path, context: dict[str, Any]) -> None
 
     if hooks.git_init:
         try:
+            # Templates render into output_dir/projectName/ — init git there
+            project_name = context.get("projectName", "")
+            git_root = (
+                output_dir / project_name if project_name and (output_dir / project_name).is_dir() else output_dir
+            )
             subprocess.run(
                 ["git", "init"],
-                cwd=output_dir,
+                cwd=git_root,
                 capture_output=True,
                 check=True,
             )
             subprocess.run(
                 ["git", "add", "."],
-                cwd=output_dir,
+                cwd=git_root,
                 capture_output=True,
                 check=True,
             )
             subprocess.run(
                 ["git", "commit", "-m", "Initial project scaffold"],
-                cwd=output_dir,
+                cwd=git_root,
                 capture_output=True,
                 check=True,
             )

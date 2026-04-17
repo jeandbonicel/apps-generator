@@ -148,6 +148,22 @@ def generate(
         if _uikit_pkg_path:
             _uikit_pkg_name = _json.load(open(_uikit_pkg_path)).get("name", "")
 
+    # Resolve api-client name early (needed by page generator)
+    _api_client_pkg_name = ""
+    if api_client is not None:
+        import json as _json2
+
+        _api_client_pkg_json = api_client / "package.json"
+        if not _api_client_pkg_json.exists():
+            # Try nested project dir
+            for child in api_client.iterdir():
+                candidate = child / "package.json"
+                if candidate.exists():
+                    _api_client_pkg_json = candidate
+                    break
+        if _api_client_pkg_json.exists():
+            _api_client_pkg_name = _json2.load(open(_api_client_pkg_json)).get("name", "")
+
     # Post-generation: create page components and update pages.ts if pages were specified
     if template_info.name == "frontend-app" and not dry_run:
         project_name = cli_values.get("projectName") or file_values.get("projectName", "")
@@ -157,7 +173,9 @@ def generate(
         if pages:
             project_root = find_project_root(result, project_name)
             if project_root:
-                generate_page_components(project_root, pages, project_name, uikit_name=_uikit_pkg_name)
+                generate_page_components(
+                    project_root, pages, project_name, uikit_name=_uikit_pkg_name, api_client_name=_api_client_pkg_name
+                )
 
     # Post-generation: create CRUD resources for api-domain
     if template_info.name == "api-domain" and not dry_run:
