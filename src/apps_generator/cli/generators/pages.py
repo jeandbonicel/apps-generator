@@ -137,8 +137,8 @@ def write_list_page(
     cells = "\n".join(cols)
 
     # Button element
-    btn_prev = f'<Button variant="outline" size="sm" onClick={{() => setPage(p => p - 1)}} disabled={{page === 0}}>{{t("previous")}}</Button>' if ui else '<button className="px-3 py-1 border rounded text-sm disabled:opacity-50" onClick={() => setPage(p => p - 1)} disabled={page === 0}>{t("previous")}</button>'
-    btn_next = f'<Button variant="outline" size="sm" onClick={{() => setPage(p => p + 1)}} disabled={{page >= totalPages - 1}}>{{t("next")}}</Button>' if ui else '<button className="px-3 py-1 border rounded text-sm disabled:opacity-50" onClick={() => setPage(p => p + 1)} disabled={page >= totalPages - 1}>{t("next")}</button>'
+    btn_prev = '<Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page === 0}>{t("previous")}</Button>' if ui else '<button className="px-3 py-1 border rounded text-sm disabled:opacity-50" onClick={() => setPage(p => p - 1)} disabled={page === 0}>{t("previous")}</button>'
+    btn_next = '<Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page >= totalPages - 1}>{t("next")}</Button>' if ui else '<button className="px-3 py-1 border rounded text-sm disabled:opacity-50" onClick={() => setPage(p => p + 1)} disabled={page >= totalPages - 1}>{t("next")}</button>'
 
     # Table wrapper
     if ui:
@@ -314,7 +314,6 @@ def write_form_page(
             else:
                 input_type = "number" if ft in ("integer", "long", "decimal") else "date" if ft == "date" else "text"
                 step = ' step="0.01"' if ft == "decimal" else ""
-                val = "checked" if ft == "boolean" else "value"
                 inputs.append(
                     f'        <div>\n'
                     f'          <label className="text-sm font-medium" htmlFor="{fname}">{flabel}{req_star}</label>\n'

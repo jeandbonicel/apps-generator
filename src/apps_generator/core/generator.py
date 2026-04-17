@@ -18,7 +18,6 @@ from apps_generator.core.engine import (
 )
 from apps_generator.core.manifest import load_template_info
 from apps_generator.core.parameters import build_context
-from apps_generator.models.context import GenerationContext
 from apps_generator.models.template import TemplateInfo
 from apps_generator.utils.console import console
 

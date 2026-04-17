@@ -198,7 +198,7 @@ def test_find_api_client_src(tmp_path: Path):
 
 def test_docker_compose_scans_projects(tmp_path: Path):
     """docker-compose command scans workspace and generates correct services."""
-    from apps_generator.cli.docker_compose import _scan_workspace, _build_compose
+    from apps_generator.cli.docker_compose import _scan_workspace
 
     # Generate a minimal workspace
     gw_template = resolve_template("api-gateway")

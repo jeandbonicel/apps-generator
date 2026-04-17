@@ -9,7 +9,6 @@ from apps_generator.cli.generators.resources import parse_resources
 from apps_generator.cli.generators.types import generate_resource_types
 from apps_generator.cli.generators.pages import (
     parse_pages,
-    find_project_root,
     generate_page_components,
 )
 

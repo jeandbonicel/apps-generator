@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Optional
 
 import typer
 import yaml
@@ -52,7 +51,7 @@ def docker_compose(
     console.print(f"  Services: {len(compose['services'])}")
     for name in compose["services"]:
         console.print(f"    - {name}")
-    console.print(f"\n  Run: docker compose up --build")
+    console.print("\n  Run: docker compose up --build")
 
 
 def _scan_workspace(directory: Path) -> list[dict]:
@@ -229,7 +228,7 @@ def _build_compose(projects: list[dict], workspace: Path) -> dict:
 
         # Add route env vars pointing to Docker service names
         for i, backend in enumerate(backends):
-            api_prefix = backend["name"].replace("-service", "").replace("_service", "")
+            backend["name"].replace("-service", "").replace("_service", "")
             gw_env[f"SPRING_CLOUD_GATEWAY_ROUTES_{i}_ID"] = backend["name"]
             gw_env[f"SPRING_CLOUD_GATEWAY_ROUTES_{i}_URI"] = f"http://{backend['name']}:8080"
             gw_env[f"SPRING_CLOUD_GATEWAY_ROUTES_{i}_PREDICATES_0"] = "Path=/api/**"
@@ -294,7 +293,7 @@ def _build_postgres_init_script(backends: list[dict]) -> str:
     for backend in backends:
         db_name = backend["name"].replace("-", "_")
         lines.append(f'echo "Creating database: {db_name}"')
-        lines.append(f'psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL')
+        lines.append('psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL')
         lines.append(f"    CREATE DATABASE {db_name};")
         lines.append(f"    GRANT ALL PRIVILEGES ON DATABASE {db_name} TO $POSTGRES_USER;")
         lines.append("EOSQL")

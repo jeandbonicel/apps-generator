@@ -486,13 +486,13 @@ def _gen_controller(java_root: Path, pkg: str, entity: str, name: str, fields: l
         return
     dest.parent.mkdir(parents=True, exist_ok=True)
 
-    var = camel_case(name)
+    camel_case(name)
 
     # Build the mapping from request DTO to entity
     set_lines = []
     resp_lines = []
     for f in fields:
-        fname = camel_case(f["name"])
+        camel_case(f["name"])
         pc = pascal_case(f["name"])
         set_lines.append(f"        entity.set{pc}(request.get{pc}());")
         resp_lines.append(f"        response.set{pc}(entity.get{pc}());")

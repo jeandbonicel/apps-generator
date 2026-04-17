@@ -81,6 +81,6 @@ def generate_resource_types(api_client_src: Path, resources: list[dict]) -> None
         if export_line not in content:
             with open(main_index, "a") as f:
                 f.write(f"\n{export_line}\n")
-            console.print(f"    Updated: src/index.ts (added resources export)")
+            console.print("    Updated: src/index.ts (added resources export)")
 
     console.print(f"[green]Generated TypeScript types for {len(exports)} resource(s)[/green]")

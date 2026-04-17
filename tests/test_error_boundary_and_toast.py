@@ -1,6 +1,5 @@
 """Tests for ErrorBoundary and ToastProvider generation in the shell template."""
 
-import json
 from pathlib import Path
 
 from apps_generator.core.generator import generate

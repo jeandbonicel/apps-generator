@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://github.com/jeandbonicel/apps-generator/tree/main/docs
+    about: Read the documentation before opening an issue
+  - name: Getting Started Guide
+    url: https://github.com/jeandbonicel/apps-generator/blob/main/docs/getting-started.md
+    about: Step-by-step tutorial for generating your first app

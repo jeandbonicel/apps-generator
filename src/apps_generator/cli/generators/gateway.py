@@ -51,7 +51,7 @@ def register_in_gateway(gateway_path: Path, service_name: str) -> None:
         return
 
     # Derive API path from service name: "order-service" -> "order", "user-service" -> "user"
-    api_prefix = service_name.replace("-service", "").replace("_service", "")
+    service_name.replace("-service", "").replace("_service", "")
 
     # Auto-assign port (8081, 8082, ...) based on existing routes
     base_port = 8081

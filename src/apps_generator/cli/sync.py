@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Optional
 
 import httpx
 import typer
 
 from apps_generator.utils.console import console
-from apps_generator.utils.naming import pascal_case, camel_case
+from apps_generator.utils.naming import camel_case
 
 
 sync_app = typer.Typer(name="sync", help="Sync API types between backend and frontend.", no_args_is_help=True)
@@ -179,7 +178,7 @@ def _openapi_type_to_ts(prop: dict, all_schemas: dict) -> str:
         return ref
 
     prop_type = prop.get("type", "string")
-    prop_format = prop.get("format", "")
+    prop.get("format", "")
 
     if prop_type == "string":
         return "string"

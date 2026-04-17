@@ -5,7 +5,7 @@ from pathlib import Path
 
 from apps_generator.core.generator import generate
 from apps_generator.templates.registry import resolve_template
-from apps_generator.cli.generators.resources import parse_resources, generate_resource_scaffolding, JAVA_TYPES, SQL_TYPES
+from apps_generator.cli.generators.resources import parse_resources, generate_resource_scaffolding
 from apps_generator.cli.generators.linking import find_java_root, find_resources_root
 
 
