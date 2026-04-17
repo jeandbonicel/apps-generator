@@ -34,8 +34,30 @@ def find_project_root(output_dir: Path, project_name: str) -> Path | None:
     return None
 
 
+def _detect_lookup(field: dict, all_resources: list[str]) -> dict | None:
+    """Auto-detect if a field should be a lookup to another resource.
+
+    Matches patterns like 'dogName' -> resource 'dog', 'categoryId' -> resource 'category'.
+    Returns lookup config dict or None.
+    """
+    fname = field["name"]
+    for res in all_resources:
+        res_lower = res.lower()
+        fname_lower = fname.lower()
+        # Match dogName, dogId, dog_name, dog_id patterns
+        if fname_lower in (f"{res_lower}name", f"{res_lower}id", f"{res_lower}_name", f"{res_lower}_id"):
+            value_field = "id" if fname_lower.endswith("id") else "name"
+            return {"resource": res, "valueField": value_field, "labelField": "name"}
+    return None
+
+
 def generate_page_components(
-    project_root: Path, pages: list[dict], project_name: str, uikit_name: str = "", api_client_name: str = ""
+    project_root: Path,
+    pages: list[dict],
+    project_name: str,
+    uikit_name: str = "",
+    api_client_name: str = "",
+    all_resources: list[str] | None = None,
 ) -> None:
     """Generate individual page component files and update pages.ts registry.
 
@@ -66,6 +88,14 @@ def generate_page_components(
             if resource and page_type == "list":
                 write_list_page(page_file, component_name, label, resource, fields, uikit_name, api_client_name)
             elif resource and page_type == "form":
+                # Auto-detect lookups for form fields
+                if all_resources:
+                    other_resources = [r for r in all_resources if r != resource]
+                    for f in fields:
+                        if "lookup" not in f:
+                            detected = _detect_lookup(f, other_resources)
+                            if detected:
+                                f["lookup"] = detected
                 write_form_page(page_file, component_name, label, resource, fields, uikit_name, api_client_name)
             elif resource and page_type == "dashboard":
                 write_dashboard_page(page_file, component_name, label, resource, fields, uikit_name, api_client_name)
@@ -259,6 +289,14 @@ def write_form_page(
 
     state_init = ", ".join(f"{k}: {v}" for k, v in defaults.items())
 
+    # Collect lookup resources (need separate useQuery for each)
+    lookups: list[dict] = []
+    for f in fields:
+        if "lookup" in f:
+            lk = f["lookup"]
+            if lk not in lookups:
+                lookups.append(lk)
+
     # Build form inputs
     inputs = []
     for f in fields:
@@ -267,8 +305,31 @@ def write_form_page(
         flabel = title_case(f["name"])
         required = f.get("required", False)
         req_star = " *" if required else ""
+        lookup = f.get("lookup")
 
         if ui:
+            # Lookup field -> Select dropdown
+            if lookup:
+                lk_res = lookup["resource"]
+                lk_var = camel_case(lk_res) + "Options"
+                lk_val = lookup.get("valueField", "name")
+                lk_label = lookup.get("labelField", "name")
+                inputs.append(
+                    f'        <div className="space-y-2">\n'
+                    f'          <Label htmlFor="{fname}">{flabel}{req_star}</Label>\n'
+                    f"          {{{lk_var}.length === 0 ? (\n"
+                    f'            <p className="text-sm text-muted-foreground">No {title_case(lk_res)}s found. <a href="../{lk_res}s/new" className="underline text-primary">Create one first</a>.</p>\n'
+                    f"          ) : (\n"
+                    f'            <select id="{fname}" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"\n'
+                    f"              value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{'required ' if required else ''}>\n"
+                    f'              <option value="">Select {flabel}...</option>\n'
+                    f"              {{{lk_var}.map((opt: any) => <option key={{opt.{lk_val}}} value={{opt.{lk_val}}}>{{opt.{lk_label}}}</option>)}}\n"
+                    f"            </select>\n"
+                    f"          )}}\n"
+                    f"        </div>"
+                )
+                continue
+
             # shadcn-style with Label + Input/Textarea/Checkbox
             if ft == "text":
                 inputs.append(
@@ -290,6 +351,14 @@ def write_form_page(
                     f'        <div className="space-y-2">\n'
                     f'          <Label htmlFor="{fname}">{flabel}{req_star}</Label>\n'
                     f'          <Input id="{fname}" type="date"\n'
+                    f"            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{'required ' if required else ''}/>\n"
+                    f"        </div>"
+                )
+            elif ft == "datetime":
+                inputs.append(
+                    f'        <div className="space-y-2">\n'
+                    f'          <Label htmlFor="{fname}">{flabel}{req_star}</Label>\n'
+                    f'          <Input id="{fname}" type="datetime-local"\n'
                     f"            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{'required ' if required else ''}/>\n"
                     f"        </div>"
                 )
@@ -318,7 +387,27 @@ def write_form_page(
                     f"        </div>"
                 )
         else:
-            # Plain HTML fallback
+            # Plain HTML fallback — lookup
+            if lookup:
+                lk_res = lookup["resource"]
+                lk_var = camel_case(lk_res) + "Options"
+                lk_val = lookup.get("valueField", "name")
+                lk_label = lookup.get("labelField", "name")
+                inputs.append(
+                    f"        <div>\n"
+                    f'          <label className="text-sm font-medium" htmlFor="{fname}">{flabel}{req_star}</label>\n'
+                    f"          {{{lk_var}.length === 0 ? (\n"
+                    f'            <p className="mt-1 text-sm text-muted-foreground">No {title_case(lk_res)}s found. <a href="../{lk_res}s/new" className="underline">Create one first</a>.</p>\n'
+                    f"          ) : (\n"
+                    f'            <select id="{fname}" className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"\n'
+                    f"              value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{'required ' if required else ''}>\n"
+                    f'              <option value="">Select {flabel}...</option>\n'
+                    f"              {{{lk_var}.map((opt: any) => <option key={{opt.{lk_val}}} value={{opt.{lk_val}}}>{{opt.{lk_label}}}</option>)}}\n"
+                    f"            </select>\n"
+                    f"          )}}\n"
+                    f"        </div>"
+                )
+                continue
             if ft == "text":
                 inputs.append(
                     f"        <div>\n"
@@ -335,7 +424,15 @@ def write_form_page(
                     f"        </div>"
                 )
             else:
-                input_type = "number" if ft in ("integer", "long", "decimal") else "date" if ft == "date" else "text"
+                input_type = (
+                    "number"
+                    if ft in ("integer", "long", "decimal")
+                    else "date"
+                    if ft == "date"
+                    else "datetime-local"
+                    if ft == "datetime"
+                    else "text"
+                )
                 step = ' step="0.01"' if ft == "decimal" else ""
                 inputs.append(
                     f"        <div>\n"
@@ -397,12 +494,37 @@ def write_form_page(
         )
         form_close = f"{submit_btn}\n      </form>"
 
+    # Build lookup query hooks
+    lookup_hooks = ""
+    rq_imports = "useMutation, useQueryClient"
+    if lookups:
+        rq_imports = "useQuery, useMutation, useQueryClient"
+        for lk in lookups:
+            lk_res = lk["resource"]
+            lk_entity = pascal_case(lk_res)
+            lk_var = camel_case(lk_res) + "Options"
+            lookup_hooks += (
+                f"\n"
+                f"  const {{ data: {lk_var}Data }} = useQuery<{{ content: {lk_entity}[] }}>({{  \n"
+                f'    queryKey: ["{lk_res}", "all"],\n'
+                f'    queryFn: () => api.get("/{lk_res}", {{ params: {{ size: "100" }} }}),\n'
+                f"  }});\n"
+                f"  const {lk_var} = {lk_var}Data?.content ?? [];\n"
+            )
+
+    # Build lookup type imports
+    lookup_type_imports = ""
+    if lookups:
+        for lk in lookups:
+            lk_entity = pascal_case(lk["resource"])
+            lookup_type_imports += f", {lk_entity}"
+
     dest.write_text(
         f'import {{ useState }} from "react";\n'
         f'import {{ useTranslation }} from "react-i18next";\n'
-        f'import {{ useMutation, useQueryClient }} from "@tanstack/react-query";\n'
+        f'import {{ {rq_imports} }} from "@tanstack/react-query";\n'
         f'import {{ useApiClient }} from "{_api_pkg}/react";\n'
-        f'import type {{ Create{entity}Request, {entity} }} from "{_api_pkg}";\n'
+        f'import type {{ Create{entity}Request, {entity}{lookup_type_imports} }} from "{_api_pkg}";\n'
         f"{ui_import}"
         f"\n"
         f"export function {component}() {{\n"
@@ -411,6 +533,7 @@ def write_form_page(
         f"  const queryClient = useQueryClient();\n"
         f"  const [form, setForm] = useState({{ {state_init} }});\n"
         f"  const [success, setSuccess] = useState(false);\n"
+        f"{lookup_hooks}"
         f"\n"
         f"  const mutation = useMutation({{\n"
         f"    mutationFn: (data: Create{entity}Request) =>\n"
