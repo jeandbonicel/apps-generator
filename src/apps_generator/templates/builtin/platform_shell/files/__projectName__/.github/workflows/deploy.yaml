@@ -22,7 +22,7 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: {% raw %}${{ inputs.environment }}{% endraw %}
+    environment: {{ '${{ inputs.environment }}' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -33,16 +33,16 @@ jobs:
       - name: Configure kubeconfig
         run: |
           mkdir -p ~/.kube
-          echo "{% raw %}${{ secrets.KUBECONFIG }}{% endraw %}" | base64 -d > ~/.kube/config
+          echo "{{ '${{ secrets.KUBECONFIG }}' }}" | base64 -d > ~/.kube/config
 
       - name: Update image tag
         run: |
-          cd k8s/overlays/{% raw %}${{ inputs.environment }}{% endraw %}
+          cd k8s/overlays/{{ '${{ inputs.environment }}' }}
 
-          kustomize edit set image {% raw %}${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.image_tag }}{% endraw %}
+          kustomize edit set image {{ '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.image_tag }}' }}
 
       - name: Deploy
         run: |
-          kubectl apply -k k8s/overlays/{% raw %}${{ inputs.environment }}{% endraw %}
+          kubectl apply -k k8s/overlays/{{ '${{ inputs.environment }}' }}
 
           kubectl rollout status deployment/{{ projectName }} -n {{ k8sNamespace }} --timeout=120s

@@ -35,6 +35,12 @@ def copy_lib_to_local_deps(lib_dir: Path, consumer_root: Path, lib_name: str) ->
         if dest_dist.exists():
             shutil.rmtree(dest_dist)
         shutil.copytree(dist_dir, dest_dist)
+    else:
+        console.print(
+            f"[yellow]  Note: {lib_name} has no dist/ yet. "
+            f"Build it first ('pnpm install && pnpm build' in {lib_dir}) "
+            f"then re-run generation to include built files.[/yellow]"
+        )
 
     # Copy source files referenced in package.json exports (tailwind-preset, globals.css)
     for src_file in ["src/tailwind-preset.ts", "src/globals.css"]:

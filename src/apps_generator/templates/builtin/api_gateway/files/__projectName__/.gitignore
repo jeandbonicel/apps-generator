@@ -1,9 +1,10 @@
 .gradle/
 build/
-!gradle/wrapper/gradle-wrapper.jar
 *.class
 *.jar
 *.war
+# Gradle wrapper jar (must come after *.jar)
+!gradle/wrapper/gradle-wrapper.jar
 *.log
 .idea/
 *.iml

@@ -22,14 +22,14 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: {{ containerRegistry }}
-          username: {% raw %}${{ github.actor }}{% endraw %}
-          password: {% raw %}${{ secrets.GITHUB_TOKEN }}{% endraw %}
+          username: {{ '${{ github.actor }}' }}
+          password: {{ '${{ secrets.GITHUB_TOKEN }}' }}
 
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: {% raw %}${{ env.IMAGE_NAME }}{% endraw %}
+          images: {{ '${{ env.IMAGE_NAME }}' }}
           tags: |
             type=sha
             type=ref,event=branch
@@ -40,8 +40,8 @@ jobs:
           context: .
           file: docker/Dockerfile
           push: true
-          tags: {% raw %}${{ steps.meta.outputs.tags }}{% endraw %}
-          labels: {% raw %}${{ steps.meta.outputs.labels }}{% endraw %}
+          tags: {{ '${{ steps.meta.outputs.tags }}' }}
+          labels: {{ '${{ steps.meta.outputs.labels }}' }}
 
       - name: Setup kubectl
         uses: azure/setup-kubectl@v3
@@ -49,12 +49,12 @@ jobs:
       - name: Configure kubeconfig
         run: |
           mkdir -p ~/.kube
-          echo "{% raw %}${{ secrets.KUBECONFIG }}{% endraw %}" | base64 -d > ~/.kube/config
+          echo "{{ '${{ secrets.KUBECONFIG }}' }}" | base64 -d > ~/.kube/config
 
       - name: Set image tag
         run: |
           cd k8s/overlays/dev
-          kustomize edit set image {% raw %}${{ env.IMAGE_NAME }}=${{ env.IMAGE_NAME }}:sha-${{ github.sha }}{% endraw %}
+          kustomize edit set image {{ '${{ env.IMAGE_NAME }}=${{ env.IMAGE_NAME }}:sha-${{ github.sha }}' }}
 
       - name: Deploy
         run: |

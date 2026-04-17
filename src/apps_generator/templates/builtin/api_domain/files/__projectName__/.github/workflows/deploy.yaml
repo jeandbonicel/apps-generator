@@ -23,7 +23,7 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: {% raw %}${{ github.event.inputs.environment }}{% endraw %}
+    environment: {{ '${{ github.event.inputs.environment }}' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -34,12 +34,12 @@ jobs:
       - name: Configure kubeconfig
         run: |
           mkdir -p $HOME/.kube
-          echo "{% raw %}${{ secrets.KUBECONFIG }}{% endraw %}" | base64 -d > $HOME/.kube/config
+          echo "{{ '${{ secrets.KUBECONFIG }}' }}" | base64 -d > $HOME/.kube/config
 
       - name: Deploy with Kustomize
         run: |
-          cd k8s/overlays/{% raw %}${{ github.event.inputs.environment }}{% endraw %}
-          kustomize edit set image {% raw %}${{ env.REGISTRY }}{% endraw %}/{% raw %}${{ env.IMAGE_NAME }}{% endraw %}={% raw %}${{ env.REGISTRY }}{% endraw %}/{% raw %}${{ env.IMAGE_NAME }}{% endraw %}:{% raw %}${{ github.event.inputs.image_tag }}{% endraw %}
+          cd k8s/overlays/{{ '${{ github.event.inputs.environment }}' }}
+          kustomize edit set image {{ '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.image_tag }}' }}
           kustomize build . | kubectl apply -f -
 
       - name: Wait for rollout
