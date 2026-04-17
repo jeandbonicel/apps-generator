@@ -32,6 +32,9 @@ def generate_migration(res_root: Path, entity: str, table: str, fields: list[dic
         if ft == "string":
             max_len = f.get("maxLength", 255)
             sql_type = f"VARCHAR({max_len})"
+        elif ft == "enum":
+            max_len = f.get("maxLength") or max((len(v) for v in f.get("values", [""])), default=50)
+            sql_type = f"VARCHAR({max_len})"
         col: dict = {"name": snake_case(f["name"]), "type": sql_type}
         if f.get("required"):
             col["nullable"] = False

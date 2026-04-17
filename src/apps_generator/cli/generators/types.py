@@ -7,7 +7,7 @@ from pathlib import Path
 from apps_generator.utils.console import console
 from apps_generator.utils.naming import pascal_case, camel_case
 
-from apps_generator.cli.generators.resources import TS_TYPES
+from apps_generator.cli.generators.resources import _ts_type_for_field
 
 
 def generate_resource_types(api_client_src: Path, resources: list[dict]) -> None:
@@ -31,7 +31,7 @@ def generate_resource_types(api_client_src: Path, resources: list[dict]) -> None
         response_fields = ["  id: number;", "  tenantId: string;"]
         create_fields = []
         for f in fields:
-            ts_type = TS_TYPES.get(f.get("type", "string"), "string")
+            ts_type = _ts_type_for_field(f)
             fname = camel_case(f["name"])
             required = f.get("required", False)
             if required:
