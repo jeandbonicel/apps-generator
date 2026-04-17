@@ -18,6 +18,46 @@ def find_consumer_root(output_dir: Path, project_name: str) -> Path | None:
     return None
 
 
+def _detect_package_manager(lib_dir: Path) -> str:
+    """Detect which package manager the library uses."""
+    if (lib_dir / "pnpm-lock.yaml").exists():
+        return "pnpm"
+    if (lib_dir / "yarn.lock").exists():
+        return "yarn"
+    return "npm"
+
+
+def _auto_build_lib(lib_dir: Path, lib_name: str) -> bool:
+    """Install deps and build a shared library. Returns True on success."""
+    import subprocess
+
+    pm = _detect_package_manager(lib_dir)
+    console.print(f"[dim]  Building {lib_name} ({pm} install && {pm} run build)...[/dim]")
+    try:
+        subprocess.run(
+            [pm, "install"],
+            cwd=lib_dir,
+            capture_output=True,
+            check=True,
+        )
+        subprocess.run(
+            [pm, "run", "build"],
+            cwd=lib_dir,
+            capture_output=True,
+            check=True,
+        )
+        console.print(f"[dim]  Built {lib_name} successfully.[/dim]")
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError) as e:
+        console.print(
+            f"[yellow]  Warning: auto-build of {lib_name} failed. "
+            f"Build it manually ('cd {lib_dir} && {pm} install && {pm} run build').[/yellow]"
+        )
+        if hasattr(e, "stderr") and e.stderr:
+            console.print(f"[dim]  {e.stderr.decode()[:200]}[/dim]")
+        return False
+
+
 def copy_lib_to_local_deps(lib_dir: Path, consumer_root: Path, lib_name: str) -> None:
     """Copy a shared library into consumer's local-deps/ for Docker builds."""
     import shutil
@@ -28,19 +68,17 @@ def copy_lib_to_local_deps(lib_dir: Path, consumer_root: Path, lib_name: str) ->
     # Copy package.json
     shutil.copy2(lib_dir / "package.json", local_deps / "package.json")
 
-    # Copy dist/ if it exists (built library)
+    # Auto-build if dist/ is missing
     dist_dir = lib_dir / "dist"
+    if not dist_dir.exists():
+        _auto_build_lib(lib_dir, lib_name)
+
+    # Copy dist/ if it exists (built library)
     if dist_dir.exists():
         dest_dist = local_deps / "dist"
         if dest_dist.exists():
             shutil.rmtree(dest_dist)
         shutil.copytree(dist_dir, dest_dist)
-    else:
-        console.print(
-            f"[yellow]  Note: {lib_name} has no dist/ yet. "
-            f"Build it first ('pnpm install && pnpm build' in {lib_dir}) "
-            f"then re-run generation to include built files.[/yellow]"
-        )
 
     # Copy source files referenced in package.json exports (tailwind-preset, globals.css)
     for src_file in ["src/tailwind-preset.ts", "src/globals.css"]:
