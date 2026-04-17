@@ -162,11 +162,15 @@ def write_list_page(
         tag = "TableCell" if ui else 'td className="p-2"'
         close_tag = "TableCell" if ui else "td"
         if ft == "decimal":
-            cols.append(f"              <{tag}>${{p.{fname}.toFixed(2)}}</{close_tag}>")
+            cols.append(f'              <{tag}>{{p.{fname} != null ? `${{p.{fname}.toFixed(2)}}` : "—"}}</{close_tag}>')
         elif ft == "boolean":
             cols.append(f'              <{tag}>{{p.{fname} ? "Yes" : "No"}}</{close_tag}>')
+        elif ft in ("date", "datetime"):
+            cols.append(
+                f'              <{tag}>{{p.{fname} ? new Date(p.{fname}).toLocaleDateString() : "—"}}</{close_tag}>'
+            )
         else:
-            cols.append(f"              <{tag}>{{p.{fname}}}</{close_tag}>")
+            cols.append(f'              <{tag}>{{p.{fname} ?? "—"}}</{close_tag}>')
     cells = "\n".join(cols)
 
     # Button element
