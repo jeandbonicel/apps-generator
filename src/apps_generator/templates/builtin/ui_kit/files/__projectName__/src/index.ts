@@ -30,6 +30,22 @@ export { Switch } from "./components/ui/switch";
 export { ScrollArea } from "./components/ui/scroll-area";
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "./components/ui/tooltip";
 export {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
+  DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel,
+} from "./components/ui/dropdown-menu";
+export {
+  Sheet, SheetTrigger, SheetClose, SheetContent,
+  SheetHeader, SheetFooter, SheetTitle, SheetDescription, sheetVariants,
+} from "./components/ui/sheet";
+export {
+  Breadcrumb, BreadcrumbList, BreadcrumbItem,
+  BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator,
+} from "./components/ui/breadcrumb";
+export {
+  Pagination, PaginationContent, PaginationItem,
+  PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis,
+} from "./components/ui/pagination";
+export {
   ChartContainer, ChartTooltip, ChartTooltipContent,
   ChartLegend, ChartLegendContent, type ChartConfig,
 } from "./components/ui/chart";

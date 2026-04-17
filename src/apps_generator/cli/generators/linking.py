@@ -167,6 +167,17 @@ export default {{
     "text-primary-foreground", "text-muted-foreground", "text-destructive-foreground",
     "hover:bg-primary/90", "hover:bg-muted/50", "hover:bg-accent",
     "disabled:pointer-events-none", "disabled:opacity-50",
+    // dropdown-menu, sheet, breadcrumb, pagination components
+    "z-50", "fixed", "inset-0", "inset-x-0", "inset-y-0", "absolute",
+    "min-w-[8rem]", "right-0", "mt-2",
+    "bg-black/80", "opacity-70", "hover:opacity-100",
+    "select-none", "cursor-pointer",
+    "pl-8", "pl-2.5", "pr-2.5", "h-px", "w-9", "h-9",
+    "sm:max-w-sm", "gap-1", "gap-1.5", "sm:gap-2.5",
+    "break-words", "flex-wrap",
+    "duration-300", "ease-in-out",
+    "translate-x-0", "-translate-x-full", "translate-y-full", "-translate-y-full",
+    "sr-only",
   ],
   plugins: [],
 }};
