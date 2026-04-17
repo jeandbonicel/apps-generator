@@ -20,6 +20,7 @@ JAVA_TYPES = {
     "boolean": "Boolean",
     "date": "LocalDate",
     "datetime": "LocalDateTime",
+    "enum": "__ENUM__",  # placeholder — replaced by generated enum class name
 }
 
 SQL_TYPES = {
@@ -31,6 +32,7 @@ SQL_TYPES = {
     "boolean": "BOOLEAN",
     "date": "DATE",
     "datetime": "TIMESTAMP",
+    "enum": "VARCHAR({maxLength})",
 }
 
 TS_TYPES = {
@@ -42,6 +44,7 @@ TS_TYPES = {
     "boolean": "boolean",
     "date": "string",
     "datetime": "string",
+    "enum": "__ENUM__",  # placeholder — replaced by union type
 }
 
 JAVA_IMPORTS = {
@@ -90,6 +93,11 @@ def generate_resource_scaffolding(
 
         console.print(f"  Generating resource: [bold]{entity_name}[/bold]")
 
+        # Generate enum classes first (needed by entity)
+        for f in fields:
+            if f.get("type") == "enum" and f.get("values"):
+                _gen_enum_class(java_root, base_package, entity_name, f)
+
         _gen_entity(java_root, base_package, entity_name, table_name, fields)
         _gen_repository(java_root, base_package, entity_name)
         _gen_service(java_root, base_package, entity_name, name)
@@ -115,10 +123,45 @@ def _collect_imports(fields: list[dict]) -> list[str]:
     return sorted(imports)
 
 
+def _gen_enum_class(java_root: Path, pkg: str, entity: str, field: dict) -> str:
+    """Generate a Java enum class for an enum field. Returns the enum class name."""
+    enum_name = pascal_case(field["name"])
+    values = field.get("values", [])
+    if not values:
+        return "String"
+
+    dest = java_root / "domain" / "model" / f"{enum_name}.java"
+    if not dest.exists():
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        enum_values = ", ".join(v.upper().replace("-", "_").replace(" ", "_") for v in values)
+        dest.write_text(f"package {pkg}.domain.model;\n\npublic enum {enum_name} {{\n    {enum_values}\n}}\n")
+        console.print(f"    Created: domain/model/{enum_name}.java")
+    return enum_name
+
+
+def _java_type_for_field(f: dict) -> str:
+    """Get Java type for a field, handling enum specially."""
+    ft = f.get("type", "string")
+    if ft == "enum":
+        return pascal_case(f["name"])
+    return JAVA_TYPES.get(ft, "String")
+
+
+def _ts_type_for_field(f: dict) -> str:
+    """Get TypeScript type for a field, handling enum specially."""
+    ft = f.get("type", "string")
+    if ft == "enum":
+        values = f.get("values", [])
+        if values:
+            return " | ".join(f'"{v}"' for v in values)
+        return "string"
+    return TS_TYPES.get(ft, "string")
+
+
 def _java_field(f: dict, with_validation: bool = False) -> str:
     """Generate a Java field declaration with optional validation annotations."""
     ft = f.get("type", "string")
-    java_type = JAVA_TYPES.get(ft, "String")
+    java_type = _java_type_for_field(f)
     name = camel_case(f["name"])
     required = f.get("required", False)
     unique = f.get("unique", False)
@@ -164,6 +207,10 @@ def _java_field(f: dict, with_validation: bool = False) -> str:
     if col_parts and not with_validation:
         lines.append(f"    @Column({', '.join(col_parts)})")
 
+    # Enum annotation for entity
+    if ft == "enum" and not with_validation:
+        lines.append("    @Enumerated(EnumType.STRING)")
+
     lines.append(f"    private {java_type} {name};")
     return "\n".join(lines)
 
@@ -184,8 +231,7 @@ def _gen_entity(java_root: Path, pkg: str, entity: str, table: str, fields: list
     # Getters and setters (only for user-defined fields — id/tenantId/timestamps come from base)
     accessors = []
     for f in fields:
-        ft = f.get("type", "string")
-        java_type = JAVA_TYPES.get(ft, "String")
+        java_type = _java_type_for_field(f)
         name = camel_case(f["name"])
         getter = f"get{pascal_case(f['name'])}"
         setter = f"set{pascal_case(f['name'])}"
@@ -346,8 +392,7 @@ def _gen_create_request(java_root: Path, pkg: str, entity: str, fields: list[dic
     # Getters/setters
     accessors = []
     for f in fields:
-        ft = f.get("type", "string")
-        java_type = JAVA_TYPES.get(ft, "String")
+        java_type = _java_type_for_field(f)
         name = camel_case(f["name"])
         getter = f"get{pascal_case(f['name'])}"
         setter = f"set{pascal_case(f['name'])}"
@@ -402,8 +447,7 @@ def _gen_update_request(java_root: Path, pkg: str, entity: str, fields: list[dic
 
     accessors = []
     for f in fields:
-        ft = f.get("type", "string")
-        java_type = JAVA_TYPES.get(ft, "String")
+        java_type = _java_type_for_field(f)
         name = camel_case(f["name"])
         getter = f"get{pascal_case(f['name'])}"
         setter = f"set{pascal_case(f['name'])}"
@@ -449,8 +493,7 @@ def _gen_response_dto(java_root: Path, pkg: str, entity: str, fields: list[dict]
 
     # User fields
     for f in fields:
-        ft = f.get("type", "string")
-        java_type = JAVA_TYPES.get(ft, "String")
+        java_type = _java_type_for_field(f)
         name = camel_case(f["name"])
         field_defs.append(f"    private {java_type} {name};")
         g = f"get{pascal_case(f['name'])}"

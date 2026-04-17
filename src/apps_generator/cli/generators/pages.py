@@ -382,6 +382,17 @@ def write_form_page(
                     f"            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{'required ' if required else ''}/>\n"
                     f"        </div>"
                 )
+            elif ft == "enum" and f.get("values"):
+                options = "".join(f'\n              <option value="{v}">{title_case(v)}</option>' for v in f["values"])
+                inputs.append(
+                    f'        <div className="space-y-2">\n'
+                    f'          <Label htmlFor="{fname}">{flabel}{req_star}</Label>\n'
+                    f'          <select id="{fname}" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"\n'
+                    f"            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{'required ' if required else ''}>\n"
+                    f'              <option value="">Select {flabel}...</option>{options}\n'
+                    f"            </select>\n"
+                    f"        </div>"
+                )
             else:
                 inputs.append(
                     f'        <div className="space-y-2">\n'
@@ -425,6 +436,17 @@ def write_form_page(
                     f'        <div className="flex items-center space-x-2">\n'
                     f'          <input id="{fname}" type="checkbox" className="h-4 w-4 rounded border-primary" checked={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.checked}}))}}/>\n'
                     f'          <label className="text-sm font-medium" htmlFor="{fname}">{flabel}</label>\n'
+                    f"        </div>"
+                )
+            elif ft == "enum" and f.get("values"):
+                options = "".join(f'\n              <option value="{v}">{title_case(v)}</option>' for v in f["values"])
+                inputs.append(
+                    f"        <div>\n"
+                    f'          <label className="text-sm font-medium" htmlFor="{fname}">{flabel}{req_star}</label>\n'
+                    f'          <select id="{fname}" className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"\n'
+                    f"            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{'required ' if required else ''}>\n"
+                    f'              <option value="">Select {flabel}...</option>{options}\n'
+                    f"            </select>\n"
                     f"        </div>"
                 )
             else:
