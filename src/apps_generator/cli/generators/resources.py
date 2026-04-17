@@ -53,6 +53,7 @@ JAVA_IMPORTS = {
 
 # -- Parsing ------------------------------------------------------------------
 
+
 def parse_resources(resources_str: str) -> list[dict]:
     """Parse resources JSON string into a list of resource configs."""
     if not resources_str or resources_str == "[]":
@@ -65,6 +66,7 @@ def parse_resources(resources_str: str) -> list[dict]:
 
 
 # -- Java code generation -----------------------------------------------------
+
 
 def generate_resource_scaffolding(
     java_root: Path,
@@ -203,7 +205,7 @@ def _gen_entity(java_root: Path, pkg: str, entity: str, table: str, fields: list
         f" * and a Hibernate @Filter that auto-scopes all queries by tenant.\n"
         f" */\n"
         f"@Entity\n"
-        f"@Table(name = \"{table}\")\n"
+        f'@Table(name = "{table}")\n'
         f"public class {entity} extends TenantAwareEntity {{\n"
         f"\n"
         f"{field_lines}\n"
@@ -285,7 +287,7 @@ def _gen_service(java_root: Path, pkg: str, entity: str, name: str) -> None:
         f"    public {entity} getById(Long id) {{\n"
         f"        // Hibernate tenant filter ensures only current tenant's data is visible\n"
         f"        return repository.findById(id)\n"
-        f"            .orElseThrow(() -> new NotFoundException(\"{entity}\", id));\n"
+        f'            .orElseThrow(() -> new NotFoundException("{entity}", id));\n'
         f"    }}\n"
         f"\n"
         f"    public {entity} create({entity} entity) {{\n"
@@ -516,7 +518,7 @@ def _gen_controller(java_root: Path, pkg: str, entity: str, name: str, fields: l
         f"import org.springframework.web.bind.annotation.*;\n"
         f"\n"
         f"@RestController\n"
-        f"@RequestMapping(\"/{name}\")\n"
+        f'@RequestMapping("/{name}")\n'
         f"public class {entity}Controller {{\n"
         f"\n"
         f"    private final {entity}Service service;\n"
@@ -527,14 +529,14 @@ def _gen_controller(java_root: Path, pkg: str, entity: str, name: str, fields: l
         f"\n"
         f"    @GetMapping\n"
         f"    public ResponseEntity<Page<{entity}Response>> list(\n"
-        f"            @RequestParam(defaultValue = \"0\") int page,\n"
-        f"            @RequestParam(defaultValue = \"20\") int size) {{\n"
+        f'            @RequestParam(defaultValue = "0") int page,\n'
+        f'            @RequestParam(defaultValue = "20") int size) {{\n'
         f"        Page<{entity}Response> result = service.list(PageRequest.of(page, size))\n"
         f"            .map(this::toResponse);\n"
         f"        return ResponseEntity.ok(result);\n"
         f"    }}\n"
         f"\n"
-        f"    @GetMapping(\"/{{id}}\")\n"
+        f'    @GetMapping("/{{id}}")\n'
         f"    public ResponseEntity<{entity}Response> getById(@PathVariable Long id) {{\n"
         f"        return ResponseEntity.ok(toResponse(service.getById(id)));\n"
         f"    }}\n"
@@ -547,7 +549,7 @@ def _gen_controller(java_root: Path, pkg: str, entity: str, name: str, fields: l
         f"        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(saved));\n"
         f"    }}\n"
         f"\n"
-        f"    @PutMapping(\"/{{id}}\")\n"
+        f'    @PutMapping("/{{id}}")\n'
         f"    public ResponseEntity<{entity}Response> update(\n"
         f"            @PathVariable Long id,\n"
         f"            @Valid @RequestBody Update{entity}Request request) {{\n"
@@ -557,7 +559,7 @@ def _gen_controller(java_root: Path, pkg: str, entity: str, name: str, fields: l
         f"        return ResponseEntity.ok(toResponse(saved));\n"
         f"    }}\n"
         f"\n"
-        f"    @DeleteMapping(\"/{{id}}\")\n"
+        f'    @DeleteMapping("/{{id}}")\n'
         f"    @ResponseStatus(HttpStatus.NO_CONTENT)\n"
         f"    public void delete(@PathVariable Long id) {{\n"
         f"        service.delete(id);\n"
@@ -656,75 +658,75 @@ def _gen_integration_test(test_root: Path, pkg: str, entity: str, name: str, fie
         f" */\n"
         f"class {entity}IntegrationTest extends AbstractIntegrationTest {{\n"
         f"\n"
-        f"    private static final String TENANT_A = \"tenant-a\";\n"
-        f"    private static final String TENANT_B = \"tenant-b\";\n"
+        f'    private static final String TENANT_A = "tenant-a";\n'
+        f'    private static final String TENANT_B = "tenant-b";\n'
         f"\n"
         f"    @Test\n"
         f"    void crud_lifecycle() throws Exception {{\n"
         f"        // CREATE\n"
-        f"        String response = mockMvc.perform(post(\"/{name}\")\n"
-        f"                .header(\"X-Tenant-ID\", TENANT_A)\n"
+        f'        String response = mockMvc.perform(post("/{name}")\n'
+        f'                .header("X-Tenant-ID", TENANT_A)\n'
         f"                .contentType(MediaType.APPLICATION_JSON)\n"
-        f"                .content(\"{json_body}\"))\n"
+        f'                .content("{json_body}"))\n'
         f"            .andExpect(status().isCreated())\n"
-        f"            .andExpect(jsonPath(\"$.id\").isNumber())\n"
-        f"            .andExpect(jsonPath(\"$.tenantId\").value(TENANT_A))\n"
+        f'            .andExpect(jsonPath("$.id").isNumber())\n'
+        f'            .andExpect(jsonPath("$.tenantId").value(TENANT_A))\n'
         f"            .andReturn().getResponse().getContentAsString();\n"
         f"\n"
         f"        // Extract ID from response\n"
-        f"        long id = com.jayway.jsonpath.JsonPath.parse(response).read(\"$.id\", Long.class);\n"
+        f'        long id = com.jayway.jsonpath.JsonPath.parse(response).read("$.id", Long.class);\n'
         f"\n"
         f"        // READ\n"
-        f"        mockMvc.perform(get(\"/{name}/\" + id)\n"
-        f"                .header(\"X-Tenant-ID\", TENANT_A))\n"
+        f'        mockMvc.perform(get("/{name}/" + id)\n'
+        f'                .header("X-Tenant-ID", TENANT_A))\n'
         f"            .andExpect(status().isOk())\n"
-        f"            .andExpect(jsonPath(\"$.id\").value(id));\n"
+        f'            .andExpect(jsonPath("$.id").value(id));\n'
         f"\n"
         f"        // LIST — tenant A should see 1 item\n"
-        f"        mockMvc.perform(get(\"/{name}\")\n"
-        f"                .header(\"X-Tenant-ID\", TENANT_A))\n"
+        f'        mockMvc.perform(get("/{name}")\n'
+        f'                .header("X-Tenant-ID", TENANT_A))\n'
         f"            .andExpect(status().isOk())\n"
-        f"            .andExpect(jsonPath(\"$.totalElements\").value(1));\n"
+        f'            .andExpect(jsonPath("$.totalElements").value(1));\n'
         f"\n"
         f"        // LIST — tenant B should see 0 items (isolation)\n"
-        f"        mockMvc.perform(get(\"/{name}\")\n"
-        f"                .header(\"X-Tenant-ID\", TENANT_B))\n"
+        f'        mockMvc.perform(get("/{name}")\n'
+        f'                .header("X-Tenant-ID", TENANT_B))\n'
         f"            .andExpect(status().isOk())\n"
-        f"            .andExpect(jsonPath(\"$.totalElements\").value(0));\n"
+        f'            .andExpect(jsonPath("$.totalElements").value(0));\n'
         f"\n"
         f"        // UPDATE\n"
-        f"        mockMvc.perform(put(\"/{name}/\" + id)\n"
-        f"                .header(\"X-Tenant-ID\", TENANT_A)\n"
+        f'        mockMvc.perform(put("/{name}/" + id)\n'
+        f'                .header("X-Tenant-ID", TENANT_A)\n'
         f"                .contentType(MediaType.APPLICATION_JSON)\n"
-        f"                .content(\"{update_json}\"))\n"
+        f'                .content("{update_json}"))\n'
         f"            .andExpect(status().isOk()){update_assertion}\n"
         f"\n"
         f"        // DELETE\n"
-        f"        mockMvc.perform(delete(\"/{name}/\" + id)\n"
-        f"                .header(\"X-Tenant-ID\", TENANT_A))\n"
+        f'        mockMvc.perform(delete("/{name}/" + id)\n'
+        f'                .header("X-Tenant-ID", TENANT_A))\n'
         f"            .andExpect(status().isNoContent());\n"
         f"\n"
         f"        // READ after delete — 404\n"
-        f"        mockMvc.perform(get(\"/{name}/\" + id)\n"
-        f"                .header(\"X-Tenant-ID\", TENANT_A))\n"
+        f'        mockMvc.perform(get("/{name}/" + id)\n'
+        f'                .header("X-Tenant-ID", TENANT_A))\n'
         f"            .andExpect(status().isNotFound());\n"
         f"    }}\n"
         f"\n"
         f"    @Test\n"
         f"    void getById_wrongTenant_returns404() throws Exception {{\n"
         f"        // Create as tenant A\n"
-        f"        String response = mockMvc.perform(post(\"/{name}\")\n"
-        f"                .header(\"X-Tenant-ID\", TENANT_A)\n"
+        f'        String response = mockMvc.perform(post("/{name}")\n'
+        f'                .header("X-Tenant-ID", TENANT_A)\n'
         f"                .contentType(MediaType.APPLICATION_JSON)\n"
-        f"                .content(\"{json_body}\"))\n"
+        f'                .content("{json_body}"))\n'
         f"            .andExpect(status().isCreated())\n"
         f"            .andReturn().getResponse().getContentAsString();\n"
         f"\n"
-        f"        long id = com.jayway.jsonpath.JsonPath.parse(response).read(\"$.id\", Long.class);\n"
+        f'        long id = com.jayway.jsonpath.JsonPath.parse(response).read("$.id", Long.class);\n'
         f"\n"
         f"        // Try to read as tenant B — should not find it\n"
-        f"        mockMvc.perform(get(\"/{name}/\" + id)\n"
-        f"                .header(\"X-Tenant-ID\", TENANT_B))\n"
+        f'        mockMvc.perform(get("/{name}/" + id)\n'
+        f'                .header("X-Tenant-ID", TENANT_B))\n'
         f"            .andExpect(status().isNotFound());\n"
         f"    }}"
         f"{validation_test}\n"

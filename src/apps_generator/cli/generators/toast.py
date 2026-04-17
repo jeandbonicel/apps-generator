@@ -27,7 +27,7 @@ def generate_toast_provider(project_root: Path, has_uikit: bool, uikit_name: str
 
 # ── ui-kit version: imports shadcn Toast from ui-kit ─────────────────────────
 
-_UIKIT_VERSION = '''import { Toaster, useToast } from "__UIKIT_NAME__";
+_UIKIT_VERSION = """import { Toaster, useToast } from "__UIKIT_NAME__";
 export { useToast };
 
 /**
@@ -41,11 +41,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     </Toaster>
   );
 }
-'''
+"""
 
 # ── built-in version: self-contained, no external deps ───────────────────────
 
-_BUILTIN_VERSION = '''import {
+_BUILTIN_VERSION = """import {
   createContext,
   useCallback,
   useContext,
@@ -137,4 +137,4 @@ function ToastAutoClose({ item, onClose }: { item: ToastItem; onClose: () => voi
     </div>
   );
 }
-'''
+"""

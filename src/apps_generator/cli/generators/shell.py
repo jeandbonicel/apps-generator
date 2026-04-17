@@ -56,10 +56,7 @@ def register_in_shell(
     }
 
     if pages:
-        new_entry["pages"] = [
-            {"path": p["path"], "label": p.get("label", title_case(p["path"]))}
-            for p in pages
-        ]
+        new_entry["pages"] = [{"path": p["path"], "label": p.get("label", title_case(p["path"]))} for p in pages]
 
     remotes.append(new_entry)
 

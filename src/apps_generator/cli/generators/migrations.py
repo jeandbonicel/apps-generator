@@ -61,30 +61,36 @@ def generate_migration(res_root: Path, entity: str, table: str, fields: list[dic
         "author": "generator",
         "changes": [
             {"createTable": {"tableName": table, "columns": col_entries}},
-            {"createIndex": {
-                "tableName": table,
-                "indexName": f"idx_{table}_tenant_id",
-                "columns": [{"column": {"name": "tenant_id"}}],
-            }},
+            {
+                "createIndex": {
+                    "tableName": table,
+                    "indexName": f"idx_{table}_tenant_id",
+                    "columns": [{"column": {"name": "tenant_id"}}],
+                }
+            },
         ],
     }
 
     # Add unique constraints
     for f in fields:
         if f.get("unique"):
-            changeset["changes"].append({
-                "addUniqueConstraint": {
-                    "tableName": table,
-                    "columnNames": snake_case(f["name"]),
-                    "constraintName": f"uq_{table}_{snake_case(f['name'])}",
+            changeset["changes"].append(
+                {
+                    "addUniqueConstraint": {
+                        "tableName": table,
+                        "columnNames": snake_case(f["name"]),
+                        "constraintName": f"uq_{table}_{snake_case(f['name'])}",
+                    }
                 }
-            })
+            )
 
-    migration_file.write_text(yaml.dump(
-        {"databaseChangeLog": [{"changeSet": changeset}]},
-        default_flow_style=False,
-        sort_keys=False,
-    ))
+    migration_file.write_text(
+        yaml.dump(
+            {"databaseChangeLog": [{"changeSet": changeset}]},
+            default_flow_style=False,
+            sort_keys=False,
+        )
+    )
 
     # Update master changelog
     master = res_root / "db" / "changelog" / "db.changelog-master.yaml"

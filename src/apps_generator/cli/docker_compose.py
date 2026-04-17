@@ -96,6 +96,7 @@ def _identify_project(path: Path) -> dict | None:
                 port = 5001
                 content = vite_config.read_text()
                 import re
+
                 port_match = re.search(r"port:\s*(\d+)", content)
                 if port_match:
                     port = int(port_match.group(1))
@@ -110,6 +111,7 @@ def _identify_project(path: Path) -> dict | None:
         settings = path / "settings.gradle.kts"
         if settings.exists():
             import re
+
             match = re.search(r'rootProject\.name\s*=\s*"([^"]+)"', settings.read_text())
             if match:
                 name = match.group(1)

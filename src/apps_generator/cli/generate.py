@@ -31,26 +31,28 @@ from apps_generator.cli.generators.toast import generate_toast_provider
 
 def generate(
     template: str = typer.Argument(help="Template name, local path, or repo/name[:version]."),
-    output_dir: Path = typer.Option(
-        None, "--output", "-o", help="Output directory. Defaults to ./<projectName>."
-    ),
-    parameters_file: Optional[Path] = typer.Option(
-        None, "--parameters", "-p", help="YAML file with parameter values."
-    ),
-    set_values: Optional[list[str]] = typer.Option(
-        None, "--set", "-s", help="Set parameter: key=value (repeatable)."
-    ),
+    output_dir: Path = typer.Option(None, "--output", "-o", help="Output directory. Defaults to ./<projectName>."),
+    parameters_file: Optional[Path] = typer.Option(None, "--parameters", "-p", help="YAML file with parameter values."),
+    set_values: Optional[list[str]] = typer.Option(None, "--set", "-s", help="Set parameter: key=value (repeatable)."),
     shell: Optional[Path] = typer.Option(
-        None, "--shell", help="Path to an existing platform-shell project. Automatically registers this frontend app in the shell's remotes.json.",
+        None,
+        "--shell",
+        help="Path to an existing platform-shell project. Automatically registers this frontend app in the shell's remotes.json.",
     ),
     uikit: Optional[Path] = typer.Option(
-        None, "--uikit", help="Path to a ui-kit project. Adds it as a dependency and extends Tailwind config.",
+        None,
+        "--uikit",
+        help="Path to a ui-kit project. Adds it as a dependency and extends Tailwind config.",
     ),
     gateway: Optional[Path] = typer.Option(
-        None, "--gateway", help="Path to an api-gateway project. Registers this backend's route in the gateway.",
+        None,
+        "--gateway",
+        help="Path to an api-gateway project. Registers this backend's route in the gateway.",
     ),
     api_client: Optional[Path] = typer.Option(
-        None, "--api-client", help="Path to an api-client project. Adds it as a dependency.",
+        None,
+        "--api-client",
+        help="Path to an api-client project. Adds it as a dependency.",
     ),
     force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing output directory."),
     dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be generated without writing."),
@@ -84,7 +86,9 @@ def generate(
 
     # Validate --api-client is only used with frontend-app, platform-shell, or api-domain
     if api_client is not None and template_info.name not in ("frontend-app", "platform-shell", "api-domain"):
-        console.print("[red]Error:[/red] --api-client can only be used with 'frontend-app', 'platform-shell', or 'api-domain' templates.")
+        console.print(
+            "[red]Error:[/red] --api-client can only be used with 'frontend-app', 'platform-shell', or 'api-domain' templates."
+        )
         raise typer.Exit(1)
 
     if shell is not None:
@@ -115,7 +119,9 @@ def generate(
 
     # Determine output directory
     if output_dir is None:
-        project_name = cli_values.get("projectName") or file_values.get("projectName") or template_info.defaults.get("projectName")
+        project_name = (
+            cli_values.get("projectName") or file_values.get("projectName") or template_info.defaults.get("projectName")
+        )
         if project_name:
             output_dir = Path.cwd() / project_name
         else:
@@ -137,6 +143,7 @@ def generate(
     if uikit is not None:
         from apps_generator.cli.generators.linking import find_uikit_package_json
         import json as _json
+
         _uikit_pkg_path = find_uikit_package_json(uikit)
         if _uikit_pkg_path:
             _uikit_pkg_name = _json.load(open(_uikit_pkg_path)).get("name", "")

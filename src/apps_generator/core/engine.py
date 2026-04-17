@@ -11,17 +11,49 @@ from jinja2 import Environment, StrictUndefined
 from apps_generator.utils import naming
 
 # File extensions that should never be processed by Jinja2
-BINARY_EXTENSIONS = frozenset({
-    ".jar", ".class", ".war", ".ear",
-    ".png", ".jpg", ".jpeg", ".gif", ".ico", ".svg", ".webp",
-    ".woff", ".woff2", ".ttf", ".eot", ".otf",
-    ".zip", ".tar", ".gz", ".bz2", ".7z",
-    ".pdf", ".doc", ".docx", ".xls", ".xlsx",
-    ".exe", ".dll", ".so", ".dylib",
-    ".pyc", ".pyo",
-    ".mp3", ".mp4", ".avi", ".mov", ".wav",
-    ".db", ".sqlite",
-})
+BINARY_EXTENSIONS = frozenset(
+    {
+        ".jar",
+        ".class",
+        ".war",
+        ".ear",
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".ico",
+        ".svg",
+        ".webp",
+        ".woff",
+        ".woff2",
+        ".ttf",
+        ".eot",
+        ".otf",
+        ".zip",
+        ".tar",
+        ".gz",
+        ".bz2",
+        ".7z",
+        ".pdf",
+        ".doc",
+        ".docx",
+        ".xls",
+        ".xlsx",
+        ".exe",
+        ".dll",
+        ".so",
+        ".dylib",
+        ".pyc",
+        ".pyo",
+        ".mp3",
+        ".mp4",
+        ".avi",
+        ".mov",
+        ".wav",
+        ".db",
+        ".sqlite",
+    }
+)
 
 # Pattern for filename variables: __variableName__ or __variable|filter__
 FILENAME_VAR_PATTERN = re.compile(r"__([a-zA-Z_][a-zA-Z0-9_]*(?:\|[a-zA-Z_]+)?)__")

@@ -12,7 +12,7 @@ BUILTIN_DIR = Path(__file__).parent / "builtin"
 
 def get_builtin_templates() -> list[TemplateInfo]:
     """Discover all built-in templates."""
-    templates = []
+    templates: list[TemplateInfo] = []
 
     if not BUILTIN_DIR.exists():
         return templates

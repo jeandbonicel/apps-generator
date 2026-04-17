@@ -86,6 +86,7 @@ def test_generate_platform_shell_has_remotes_json(tmp_output: Path):
     assert remotes_file.exists()
 
     import json
+
     remotes = json.loads(remotes_file.read_text())
     assert remotes == []
 
@@ -123,6 +124,7 @@ def test_shell_linking_registers_frontend(tmp_path: Path):
 
     # Manually call the registration (simulates --shell flag)
     from apps_generator.cli.generators.shell import register_in_shell
+
     register_in_shell(
         shell_path=shell_dir,
         app_name="orders",
@@ -131,6 +133,7 @@ def test_shell_linking_registers_frontend(tmp_path: Path):
     )
 
     import json
+
     remotes = json.loads(remotes_file.read_text())
     assert len(remotes) == 1
     assert remotes[0]["name"] == "orders"
@@ -171,10 +174,12 @@ def test_shell_linking_no_duplicates(tmp_path: Path):
     )
 
     from apps_generator.cli.generators.shell import register_in_shell
+
     register_in_shell(shell_path=shell_dir, app_name="orders", dev_port="5001", menu_label="Orders")
     register_in_shell(shell_path=shell_dir, app_name="orders", dev_port="5001", menu_label="Orders")
 
     import json
+
     remotes_file = shell_dir / "my-shell" / "public" / "remotes.json"
     remotes = json.loads(remotes_file.read_text())
     assert len(remotes) == 1
@@ -222,6 +227,7 @@ def test_shell_linking_with_pages(tmp_path: Path):
     )
 
     import json
+
     remotes_file = shell_dir / "my-shell" / "public" / "remotes.json"
     remotes = json.loads(remotes_file.read_text())
     assert len(remotes) == 1
@@ -321,12 +327,14 @@ def test_uikit_linking(tmp_path: Path):
     )
 
     from apps_generator.cli.generators.linking import register_uikit, find_consumer_root
+
     consumer_root = find_consumer_root(shell_dir, "my-shell")
     assert consumer_root is not None
 
     register_uikit(uikit_path=uikit_dir, consumer_root=consumer_root)
 
     import json
+
     pkg = json.loads((consumer_root / "package.json").read_text())
     assert "my-ui-kit" in pkg["dependencies"]
     assert pkg["dependencies"]["my-ui-kit"].startswith("file:")

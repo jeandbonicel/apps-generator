@@ -127,6 +127,7 @@ def validate(
     # Try loading the template
     try:
         from apps_generator.core.manifest import load_template_info
+
         load_template_info(path)
         console.print(f"[green]Template at {path} is valid.[/green]")
     except Exception as e:
