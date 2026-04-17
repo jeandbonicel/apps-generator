@@ -14,6 +14,10 @@ on:
         description: "Docker image tag to deploy"
         required: true
         type: string
+      base_url:
+        description: "Base URL for E2E tests (e.g. https://app.example.com)"
+        required: false
+        type: string
 
 env:
   REGISTRY: {{ containerRegistry }}
@@ -38,11 +42,54 @@ jobs:
       - name: Update image tag
         run: |
           cd k8s/overlays/{{ '${{ inputs.environment }}' }}
-
           kustomize edit set image {{ '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.image_tag }}' }}
 
       - name: Deploy
         run: |
           kubectl apply -k k8s/overlays/{{ '${{ inputs.environment }}' }}
-
           kubectl rollout status deployment/{{ projectName }} -n {{ k8sNamespace }} --timeout=120s
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: {{ '${{ inputs.base_url != \'\' }}' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: {{ nodeVersion }}
+{% if packageManager == "pnpm" %}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Install dependencies
+        run: pnpm install
+{% elif packageManager == "yarn" %}
+
+      - name: Install dependencies
+        run: yarn install
+{% else %}
+
+      - name: Install dependencies
+        run: npm ci
+{% endif %}
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        run: {{ packageManager }}{% if packageManager == "npm" %} run{% endif %} e2e -- --project=chromium
+        env:
+          PLAYWRIGHT_BASE_URL: {{ '${{ inputs.base_url }}' }}
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: {{ '${{ !cancelled() }}' }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
