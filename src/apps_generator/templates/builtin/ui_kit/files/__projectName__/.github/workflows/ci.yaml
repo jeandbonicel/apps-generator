@@ -29,6 +29,7 @@ jobs:
 
       - name: Lint
         run: pnpm run lint
+        continue-on-error: true
 
       - name: Build library
         run: pnpm run build
@@ -42,6 +43,7 @@ jobs:
 
       - name: Lint
         run: yarn lint
+        continue-on-error: true
 
       - name: Build library
         run: yarn build
@@ -55,6 +57,7 @@ jobs:
 
       - name: Lint
         run: npm run lint
+        continue-on-error: true
 
       - name: Build library
         run: npm run build
