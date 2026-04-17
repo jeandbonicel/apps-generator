@@ -33,9 +33,25 @@ appgen generate api-domain -o ./product-service \
   -s 'resources=[{"name":"product","fields":[{"name":"name","type":"string","required":true,"maxLength":255},{"name":"price","type":"decimal","required":true,"min":0},{"name":"active","type":"boolean"}]}]' \
   --gateway ./gateway --api-client ./api-client
 
-# 6. Micro-frontend with data-aware pages
+# 6. Micro-frontend with data-aware pages (dashboard + list + form)
 appgen generate frontend-app -o ./products -s projectName=products -s devPort=5001 \
-  -s 'pages=[{"path":"list","label":"Products"},{"path":"create","label":"New Product"}]' \
+  -s 'pages=[
+    {"path":"overview","label":"Overview","resource":"product","type":"dashboard","fields":[
+      {"name":"name","type":"string","required":true},
+      {"name":"price","type":"decimal","required":true},
+      {"name":"active","type":"boolean"}
+    ]},
+    {"path":"list","label":"Products","resource":"product","type":"list","fields":[
+      {"name":"name","type":"string","required":true},
+      {"name":"price","type":"decimal","required":true},
+      {"name":"active","type":"boolean"}
+    ]},
+    {"path":"create","label":"New Product","resource":"product","type":"form","fields":[
+      {"name":"name","type":"string","required":true},
+      {"name":"price","type":"decimal","required":true},
+      {"name":"description","type":"text"}
+    ]}
+  ]' \
   --shell ./my-platform --uikit ./ui-kit --api-client ./api-client
 
 # 7. Build shared libs, then run everything

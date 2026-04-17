@@ -162,3 +162,45 @@ appgen generate api-domain -o ./service \
 ```
 
 Each resource gets its own entity, repository, service, controller, DTOs, migration, test, and TypeScript types. Migrations are numbered sequentially (002, 003, 004...) after the initial 001-init migration.
+
+## Frontend Page Types
+
+When generating a `frontend-app` with the `pages` parameter, each page can reference a resource with a `type` that determines the generated component. Three page types are available:
+
+| Type | What it generates |
+|------|-------------------|
+| `list` | Paginated table with columns derived from `fields`, loading/error states, previous/next pagination |
+| `form` | Create form with type-appropriate inputs (text, number, checkbox, textarea, date), validation, and mutation |
+| `dashboard` | Stat cards + bar chart + recent items table for the resource |
+
+### Dashboard page example
+
+```json
+{
+  "path": "overview",
+  "label": "Overview",
+  "resource": "product",
+  "type": "dashboard",
+  "fields": [
+    {"name": "name", "type": "string", "required": true},
+    {"name": "price", "type": "decimal", "required": true},
+    {"name": "active", "type": "boolean"}
+  ]
+}
+```
+
+The dashboard page auto-picks the first numeric field (`price`) for chart values and the first string field (`name`) for category grouping. It uses the `ChartContainer`, `ChartTooltip`, and `ChartLegend` components from the ui-kit, which wrap Recharts internally.
+
+### Typical three-page setup
+
+A common pattern is to combine all three page types for a single resource:
+
+```json
+[
+  {"path": "overview", "label": "Overview", "resource": "product", "type": "dashboard", "fields": [...]},
+  {"path": "products", "label": "Products", "resource": "product", "type": "list", "fields": [...]},
+  {"path": "products/new", "label": "Add Product", "resource": "product", "type": "form", "fields": [...]}
+]
+```
+
+This gives users a dashboard for at-a-glance metrics, a list for browsing and searching records, and a form for creating new entries.

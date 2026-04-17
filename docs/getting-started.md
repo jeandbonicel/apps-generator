@@ -129,13 +129,32 @@ The `--gateway` flag registers `product-service` in the gateway's `routes.yaml` 
 
 ```bash
 appgen generate frontend-app -o ./workspace/products -s projectName=products -s devPort=5001 \
-  -s 'pages=[{"path":"list","label":"Products"},{"path":"create","label":"New Product"}]' \
+  -s 'pages=[
+    {"path":"overview","label":"Overview","resource":"product","type":"dashboard","fields":[
+      {"name":"name","type":"string","required":true},
+      {"name":"price","type":"decimal","required":true},
+      {"name":"active","type":"boolean"}
+    ]},
+    {"path":"list","label":"Products","resource":"product","type":"list","fields":[
+      {"name":"name","type":"string","required":true},
+      {"name":"price","type":"decimal","required":true},
+      {"name":"active","type":"boolean"}
+    ]},
+    {"path":"create","label":"New Product","resource":"product","type":"form","fields":[
+      {"name":"name","type":"string","required":true},
+      {"name":"price","type":"decimal","required":true},
+      {"name":"description","type":"text"}
+    ]}
+  ]' \
   --shell ./workspace/my-platform \
   --uikit ./workspace/ui-kit \
   --api-client ./workspace/api-client
 ```
 
-The `--shell` flag registers this MFE in the platform shell's `remotes.json`. The pages appear as a vertical sidebar inside the "Products" tab.
+The `--shell` flag registers this MFE in the platform shell's `remotes.json`. The pages appear as a vertical sidebar inside the "Products" tab. The three page types are:
+- **dashboard** -- stat cards, a bar chart (auto-picks the first numeric field), and a recent items table
+- **list** -- paginated table with type-aware cell rendering
+- **form** -- create form with validation and mutation
 
 ## Step 7: Build Shared Libraries
 
@@ -173,8 +192,9 @@ Open `http://localhost:5173` in your browser.
 1. Sign in with Clerk (or your OIDC provider)
 2. Select an organization from the org switcher
 3. Click the "Products" tab
-4. The "Products" list page loads -- it uses `useQuery` to fetch from `/api/product/product`
-5. Click "New Product" in the sidebar to see the create form
+4. The "Overview" dashboard page loads -- it shows stat cards, a bar chart of prices by product name, and a recent items table
+5. Click "Products" in the sidebar to see the paginated list page
+6. Click "New Product" in the sidebar to see the create form
 
 API requests flow: Browser -> Shell nginx -> Gateway (:8080) -> product-service (:8081) -> PostgreSQL.
 

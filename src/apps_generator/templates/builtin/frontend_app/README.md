@@ -25,11 +25,16 @@ appgen generate frontend-app -o ./orders \
 appgen generate frontend-app -o ./users -s projectName=users -s devPort=5002 --shell ./my-platform
 appgen generate frontend-app -o ./reports -s projectName=reports -s devPort=5003 --shell ./my-platform
 
-# With data-aware pages and linked api-client
+# With data-aware pages (dashboard + list + form) and linked api-client
 appgen generate frontend-app -o ./catalog \
   -s projectName=catalog \
   -s devPort=5001 \
   -s pages='[
+    {"path":"overview","label":"Overview","resource":"product","type":"dashboard","fields":[
+      {"name":"name","type":"string","required":true},
+      {"name":"price","type":"decimal","required":true},
+      {"name":"active","type":"boolean"}
+    ]},
     {"path":"products","label":"Products","resource":"product","type":"list","fields":[
       {"name":"name","type":"string","required":true},
       {"name":"price","type":"decimal","required":true},
@@ -98,7 +103,7 @@ These generate placeholder components with a heading and description.
 
 ### Data-aware pages
 
-Pages with `resource` and `type` fields generate components that fetch data from the backend using `useApiClient()` and TanStack Query.
+Pages with `resource` and `type` fields generate components that fetch data from the backend using `useApiClient()` and TanStack Query. Three page types are supported: `list`, `form`, and `dashboard`.
 
 **List page** (`type: "list"`):
 
@@ -153,6 +158,29 @@ Generates a component with:
 - Success/error feedback messages
 - Automatic query invalidation on successful creation
 
+**Dashboard page** (`type: "dashboard"`):
+
+```json
+{
+  "path": "overview",
+  "label": "Overview",
+  "resource": "product",
+  "type": "dashboard",
+  "fields": [
+    {"name": "name", "type": "string", "required": true},
+    {"name": "price", "type": "decimal", "required": true},
+    {"name": "active", "type": "boolean"}
+  ]
+}
+```
+
+Generates a component with:
+- Stat cards showing aggregate counts and totals for the resource
+- A bar chart visualizing data -- auto-picks the first numeric field for values and the first string field for category grouping
+- A recent items table showing the latest records
+- Uses `ChartContainer`, `ChartTooltip`, and `ChartLegend` from the ui-kit
+- Recharts (`BarChart`, `Bar`, `XAxis`, `YAxis`) comes as a dependency of the ui-kit -- no extra install needed
+
 ### TypeScript types
 
 Data-aware pages import types from the linked api-client:
@@ -189,6 +217,7 @@ orders/
 │   ├── pages.ts                  # Page registry (maps paths to components)
 │   ├── routes/
 │   │   ├── HomePage.tsx
+│   │   ├── OverviewPage.tsx      # Generated dashboard page (if type: "dashboard")
 │   │   ├── ProductsPage.tsx      # Generated list page (if type: "list")
 │   │   └── ProductsNewPage.tsx   # Generated form page (if type: "form")
 │   ├── components/

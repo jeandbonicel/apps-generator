@@ -5,7 +5,8 @@ Shared UI component library built with shadcn/ui, Tailwind CSS, and Storybook. P
 ## What it generates
 
 A React component library that:
-- Pre-installs **shadcn/ui** components (Button, Card, Badge, Input, Dialog, Table, Alert, Select, Tabs)
+- Pre-installs **shadcn/ui** components (Button, Card, Badge, Input, Dialog, Table, Alert, Select, Tabs, Checkbox, Textarea, Separator, Skeleton, Progress, Avatar, Switch, ScrollArea, Tooltip, DropdownMenu, Sheet, Breadcrumb, Pagination)
+- Includes **Chart** components (ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent) powered by Recharts
 - Includes **Toast** components (Toast, ToastTitle, ToastDescription) with variants and a Toaster context
 - Includes **layout components** (Page, PageHeader, PageSection, PageGrid) for consistent spacing
 - Exports a **Tailwind preset** with shared design tokens (colors, spacing, border radius)
@@ -52,7 +53,7 @@ Then export from `src/index.ts` and create a story in `stories/`.
 ## Components
 
 ### UI Components (shadcn/ui)
-Button, Card (CardHeader, CardTitle, CardDescription, CardContent, CardFooter), Badge, Input, Label, Dialog (DialogPortal, DialogOverlay, DialogClose, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription), Table (TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption), Alert (AlertTitle, AlertDescription), Select (SelectGroup, SelectValue, SelectTrigger, SelectContent, SelectLabel, SelectItem, SelectSeparator), Tabs (TabsList, TabsTrigger, TabsContent)
+Button, Card (CardHeader, CardTitle, CardDescription, CardContent, CardFooter), Badge, Input, Label, Dialog (DialogPortal, DialogOverlay, DialogClose, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription), Table (TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption), Alert (AlertTitle, AlertDescription), Select (SelectGroup, SelectValue, SelectTrigger, SelectContent, SelectLabel, SelectItem, SelectSeparator), Tabs (TabsList, TabsTrigger, TabsContent), Checkbox, Textarea, Separator, Skeleton, Progress, Avatar (AvatarImage, AvatarFallback), Switch, ScrollArea, Tooltip (TooltipTrigger, TooltipContent, TooltipProvider), DropdownMenu (DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel), Sheet (SheetTrigger, SheetClose, SheetContent, SheetHeader, SheetFooter, SheetTitle, SheetDescription), Breadcrumb (BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator), Pagination (PaginationContent, PaginationItem, PaginationLink, PaginationPrevious, PaginationNext, PaginationEllipsis)
 
 ### Toast Components
 
@@ -108,6 +109,36 @@ The `toast()` function accepts:
 - `variant` (optional) -- `"default"`, `"destructive"`, or `"success"`
 - `duration` (optional) -- milliseconds before auto-dismiss (default: 5000)
 
+### Chart Components (Recharts)
+
+The chart system wraps [Recharts](https://recharts.org/) with theme-aware containers and tooltip/legend components that integrate with the ui-kit design tokens.
+
+- **ChartContainer** -- responsive wrapper that provides Recharts `ResponsiveContainer` and applies theme colors from a `ChartConfig`
+- **ChartTooltip** / **ChartTooltipContent** -- themed tooltip that renders on hover
+- **ChartLegend** / **ChartLegendContent** -- themed legend for chart series
+
+```tsx
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "my-ui-kit";
+import type { ChartConfig } from "my-ui-kit";
+import { BarChart, Bar, XAxis, YAxis } from "recharts";
+
+const config: ChartConfig = {
+  revenue: { label: "Revenue", color: "var(--chart-1)" },
+};
+
+<ChartContainer config={config} className="h-64 w-full">
+  <BarChart data={data}>
+    <XAxis dataKey="month" />
+    <YAxis />
+    <ChartTooltip content={<ChartTooltipContent />} />
+    <ChartLegend content={<ChartLegendContent />} />
+    <Bar dataKey="revenue" fill="var(--color-revenue)" />
+  </BarChart>
+</ChartContainer>
+```
+
+Recharts is included as a dependency of the ui-kit. Frontend apps that use chart components do not need to install Recharts separately.
+
 ### Layout Components
 - `<Page>` -- max-width + padding + vertical section gap
 - `<PageHeader title="..." description="...">` -- title + actions
@@ -119,6 +150,11 @@ The `toast()` function accepts:
 - `buttonVariants` -- CVA variants for Button
 - `badgeVariants` -- CVA variants for Badge
 - `toastVariants` -- CVA variants for Toast
+- `sheetVariants` -- CVA variants for Sheet
+
+### Storybook Stories (23 total)
+
+Button, Card, Badge, Input, Dialog, Table, Alert, Page, Checkbox, Textarea, Switch, Separator, Skeleton, Avatar, Progress, Tooltip, ScrollArea, Toast, DropdownMenu, Chart, Breadcrumb, Pagination, Sheet
 
 ## Exports
 
@@ -133,6 +169,16 @@ Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, Tabl
 Alert, AlertTitle, AlertDescription, Select, SelectGroup, SelectValue, SelectTrigger,
 SelectContent, SelectLabel, SelectItem, SelectSeparator, Tabs, TabsList, TabsTrigger, TabsContent,
 Toast, ToastTitle, ToastDescription, toastVariants, Toaster, useToast,
+Checkbox, Textarea, Separator, Skeleton, Progress, Avatar, AvatarImage, AvatarFallback,
+Switch, ScrollArea, Tooltip, TooltipTrigger, TooltipContent, TooltipProvider,
+DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+DropdownMenuSeparator, DropdownMenuLabel,
+Sheet, SheetTrigger, SheetClose, SheetContent, SheetHeader, SheetFooter,
+SheetTitle, SheetDescription, sheetVariants,
+Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator,
+Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationPrevious,
+PaginationNext, PaginationEllipsis,
+ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, ChartConfig,
 
 // Layout
 Page, PageHeader, PageSection, PageGrid,
