@@ -30,4 +30,7 @@ export default defineConfig({
   build: {
     target: "chrome89",
   },
+  test: {
+    exclude: ["e2e/**", "node_modules/**"],
+  },
 });
