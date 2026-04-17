@@ -173,8 +173,15 @@ def generate(
         if pages:
             project_root = find_project_root(result, project_name)
             if project_root:
+                # Collect all resource names from pages for lookup auto-detection
+                all_resources = list({p["resource"] for p in pages if p.get("resource")})
                 generate_page_components(
-                    project_root, pages, project_name, uikit_name=_uikit_pkg_name, api_client_name=_api_client_pkg_name
+                    project_root,
+                    pages,
+                    project_name,
+                    uikit_name=_uikit_pkg_name,
+                    api_client_name=_api_client_pkg_name,
+                    all_resources=all_resources,
                 )
 
     # Post-generation: create CRUD resources for api-domain
