@@ -209,9 +209,31 @@ All templates use the shadcn neutral theme (near-black primary, not blue):
 - `--radius: 0.5rem`
 - `--chart-1..5` for Recharts colors
 
+## i18n / Translations
+
+- Both shell and frontend-app use `i18next` + `react-i18next`
+- Supported languages: English (en), French (fr). Fallback: en
+- Translation files: `src/i18n/locales/en.json` and `fr.json`
+- Shell syncs language to MFEs via `window.__SHELL_LANGUAGE__` + event
+- All UI strings use `t("key")` — no hardcoded English in components
+- Generated pages (list/form/dashboard) use `useTranslation()` for all UI text
+- Translation keys: loading, noDataFound, previous, next, create, creating, createdSuccessfully, failedToLoad, etc.
+
+**Adding a new language:** Copy `en.json` to `<lang>.json`, translate values, add to `i18n/index.ts` resources.
+
+**Translation tests:** `test_translations.py` verifies EN/FR key parity, no empty values, essential keys present, no hardcoded English in components.
+
 ## Testing
 
-78+ tests in `tests/`. Run: `.venv/bin/pytest tests/ -v`
+89+ tests in `tests/`. Run: `.venv/bin/pytest tests/ -v`
+
+Key test modules:
+- `test_translations.py` — EN/FR completeness, no hardcoded English
+- `test_resources.py` — CRUD scaffolding, tenant isolation
+- `test_types_and_pages.py` — TypeScript types, data-aware pages
+- `test_gateway_and_linking.py` — Gateway routes, api-client linking
+- `test_e2e_generation.py` — Full-stack workflow
+- `test_error_boundary_and_toast.py` — ErrorBoundary, ToastProvider
 
 ## Conventions
 
@@ -221,3 +243,5 @@ All templates use the shadcn neutral theme (near-black primary, not blue):
 - All entities extend TenantAwareEntity (Hibernate @Filter for tenant isolation)
 - Generated pages use inline styles for spacing (reliable across Module Federation)
 - ui-kit Tailwind classes are safelisted in consumer builds (linking.py)
+- All UI strings must use i18n `t("key")` — tests enforce this
+- Every EN key must have a matching FR translation — tests enforce this

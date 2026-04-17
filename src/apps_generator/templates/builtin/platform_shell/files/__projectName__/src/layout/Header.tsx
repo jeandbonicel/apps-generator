@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { TenantSwitcher } from "../tenants/TenantSwitcher";
 import { LanguageSwitcher } from "../i18n/LanguageSwitcher";
 {% if authProvider == "clerk" %}
@@ -7,6 +8,7 @@ import { useAuth } from "../auth/useAuth";
 {% endif %}
 
 export function Header() {
+  const { t } = useTranslation();
 {% if authProvider != "clerk" %}
   const { user, logout } = useAuth();
 {% endif %}
@@ -29,7 +31,7 @@ export function Header() {
           onClick={logout}
           className="px-3 py-1.5 text-sm text-muted-foreground border rounded-md hover:bg-accent"
         >
-          Sign Out
+          {t("signOut")}
         </button>
 {% endif %}
       </div>

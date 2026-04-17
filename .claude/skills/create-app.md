@@ -173,7 +173,72 @@ docker compose up -d
 
 Wait for services to be healthy, then report the URLs to the user.
 
-## Step 5: Report
+## Step 5: Translator — Verify and Extend Translations
+
+After all projects are generated, verify translations are complete:
+
+### 5a. Check shell translations
+
+Read `$WORKSPACE/shell/<shell-name>/src/i18n/locales/en.json` and `fr.json`.
+Verify all keys match. If any custom page labels were added (from the MFE pages), add them to both locale files.
+
+### 5b. Check MFE translations
+
+For each MFE, read `$WORKSPACE/<mfe-name>/<mfe-name>/src/i18n/locales/en.json` and `fr.json`.
+Add translations for any resource-specific labels:
+
+```json
+// en.json — add resource-specific keys
+{
+  "dashboard": "Dashboard",
+  "allDogs": "All Dogs",
+  "addDog": "Add Dog",
+  "dogName": "Dog Name",
+  "breed": "Breed",
+  ...
+}
+
+// fr.json — translate
+{
+  "dashboard": "Tableau de bord",
+  "allDogs": "Tous les chiens",
+  "addDog": "Ajouter un chien",
+  "dogName": "Nom du chien",
+  "breed": "Race",
+  ...
+}
+```
+
+### 5c. Add nav translations to shell
+
+For each MFE registered in the shell, add navigation translations:
+
+```json
+// Shell en.json — add nav keys for each MFE page
+{
+  "nav.dogs.dashboard": "Dashboard",
+  "nav.dogs.list": "All Dogs",
+  "nav.dogs.new": "Add Dog"
+}
+
+// Shell fr.json
+{
+  "nav.dogs.dashboard": "Tableau de bord",
+  "nav.dogs.list": "Tous les chiens",
+  "nav.dogs.new": "Ajouter un chien"
+}
+```
+
+### 5d. Run translation tests
+
+```bash
+cd /Users/admin/Documents/Projects/apps-generator
+.venv/bin/pytest tests/test_translations.py -v
+```
+
+This verifies EN/FR key parity, no empty values, and essential keys present.
+
+## Step 6: Report
 
 Print a summary:
 

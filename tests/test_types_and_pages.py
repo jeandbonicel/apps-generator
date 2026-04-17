@@ -171,13 +171,16 @@ def test_list_page_with_resource(tmp_path: Path):
     assert "Price" in content
     assert "Stock" in content
 
-    # States
-    assert "Loading" in content
-    assert "No data found" in content
+    # States (using i18n keys)
+    assert 't("loading")' in content
+    assert 't("noDataFound")' in content
 
-    # Pagination
-    assert "Previous" in content
-    assert "Next" in content
+    # Pagination (using i18n keys)
+    assert 't("previous")' in content
+    assert 't("next")' in content
+
+    # i18n import
+    assert "useTranslation" in content
 
 
 def test_form_page_with_resource(tmp_path: Path):
@@ -215,10 +218,13 @@ def test_form_page_with_resource(tmp_path: Path):
     assert "Name *" in content
     assert "Price *" in content
 
-    # Submit
-    assert "Create" in content
-    assert "Creating..." in content
-    assert "Created successfully" in content
+    # Submit (using i18n keys)
+    assert 't("create")' in content
+    assert 't("creating")' in content
+    assert 't("createdSuccessfully")' in content
+
+    # i18n import
+    assert "useTranslation" in content
 
     # API call
     assert '"/product"' in content

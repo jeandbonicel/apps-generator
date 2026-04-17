@@ -1,5 +1,6 @@
 {% raw %}
 import React, { Suspense } from "react";
+import { useTranslation } from "react-i18next";
 import { loadRemote } from "@module-federation/enhanced/runtime";
 
 interface RemoteAppLoaderProps {
@@ -22,13 +23,14 @@ function getRemoteComponent(remoteName: string) {
 }
 
 export function RemoteAppLoader({ remoteName, activePage, basePath }: RemoteAppLoaderProps) {
+  const { t } = useTranslation();
   const RemoteComponent = getRemoteComponent(remoteName);
 
   return (
     <Suspense
       fallback={
         <div className="flex items-center justify-center h-full">
-          <p className="text-gray-500">Loading module...</p>
+          <p className="text-muted-foreground">{t("loadingModule")}</p>
         </div>
       }
     >

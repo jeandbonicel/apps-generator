@@ -137,8 +137,8 @@ def write_list_page(
     cells = "\n".join(cols)
 
     # Button element
-    btn_prev = f'<Button variant="outline" size="sm" onClick={{() => setPage(p => p - 1)}} disabled={{page === 0}}>Previous</Button>' if ui else '<button className="px-3 py-1 border rounded text-sm disabled:opacity-50" onClick={() => setPage(p => p - 1)} disabled={page === 0}>Previous</button>'
-    btn_next = f'<Button variant="outline" size="sm" onClick={{() => setPage(p => p + 1)}} disabled={{page >= totalPages - 1}}>Next</Button>' if ui else '<button className="px-3 py-1 border rounded text-sm disabled:opacity-50" onClick={() => setPage(p => p + 1)} disabled={page >= totalPages - 1}>Next</button>'
+    btn_prev = f'<Button variant="outline" size="sm" onClick={{() => setPage(p => p - 1)}} disabled={{page === 0}}>{{t("previous")}}</Button>' if ui else '<button className="px-3 py-1 border rounded text-sm disabled:opacity-50" onClick={() => setPage(p => p - 1)} disabled={page === 0}>{t("previous")}</button>'
+    btn_next = f'<Button variant="outline" size="sm" onClick={{() => setPage(p => p + 1)}} disabled={{page >= totalPages - 1}}>{{t("next")}}</Button>' if ui else '<button className="px-3 py-1 border rounded text-sm disabled:opacity-50" onClick={() => setPage(p => p + 1)} disabled={page >= totalPages - 1}>{t("next")}</button>'
 
     # Table wrapper
     if ui:
@@ -146,24 +146,26 @@ def write_list_page(
         table_head_close = "              </TableRow>\n            </TableHeader>\n            <TableBody>"
         row_open = '              <TableRow key={p.id}>'
         row_close = "              </TableRow>"
-        empty_row = f'              <TableRow><TableCell colSpan={{{len(fields)}}} className="text-center text-muted-foreground py-8">No data found</TableCell></TableRow>'
+        empty_row = f'              <TableRow><TableCell colSpan={{{len(fields)}}} className="text-center text-muted-foreground py-8">{{t("noDataFound")}}</TableCell></TableRow>'
         table_close = "            </TableBody>\n          </Table>\n        </CardContent>\n      </Card>"
     else:
         table_open = '      <table className="w-full border-collapse">\n        <thead>\n          <tr className="border-b">'
         table_head_close = "          </tr>\n        </thead>\n        <tbody>"
         row_open = '            <tr key={p.id} className="border-b">'
         row_close = "            </tr>"
-        empty_row = f'            <tr><td colSpan={{{len(fields)}}} className="p-4 text-center text-muted-foreground">No data found</td></tr>'
+        empty_row = f'            <tr><td colSpan={{{len(fields)}}} className="p-4 text-center text-muted-foreground">{{t("noDataFound")}}</td></tr>'
         table_close = "        </tbody>\n      </table>"
 
     dest.write_text(
         f'import {{ useState }} from "react";\n'
+        f'import {{ useTranslation }} from "react-i18next";\n'
         f'import {{ useQuery }} from "@tanstack/react-query";\n'
         f'import {{ useApiClient }} from "my-api-client/react";\n'
         f'import type {{ {entity}, PageResponse }} from "my-api-client";\n'
         f'{ui_import}'
         f"\n"
         f"export function {component}() {{\n"
+        f"  const {{ t }} = useTranslation();\n"
         f"  const api = useApiClient();\n"
         f"  const [page, setPage] = useState(0);\n"
         f"\n"
@@ -172,8 +174,8 @@ def write_list_page(
         f'    queryFn: () => api.get<PageResponse<{entity}>>("/{resource}", {{ params: {{ page: String(page), size: "20" }} }}),\n'
         f"  }});\n"
         f"\n"
-        f'  if (isLoading) return <p className="p-6 text-muted-foreground">Loading...</p>;\n'
-        f'  if (error) return <p className="p-6 text-destructive">Failed to load: {{(error as Error).message}}</p>;\n'
+        f'  if (isLoading) return <p className="text-muted-foreground">{{t("loading")}}</p>;\n'
+        f'  if (error) return <p className="text-destructive">{{t("failedToLoad")}}: {{(error as Error).message}}</p>;\n'
         f"\n"
         f"  const items = data?.content ?? [];\n"
         f"  const totalPages = data?.totalPages ?? 0;\n"
@@ -339,16 +341,16 @@ def write_form_page(
     # Submit button — use inline style for margin since Tailwind classes may not
     # be generated when MFE is loaded via Module Federation in the shell
     if ui:
-        submit_btn = '          <div style={{ paddingTop: "1.5rem" }}>\n            <Button type="submit" disabled={mutation.isPending}>\n              {mutation.isPending ? "Creating..." : "Create"}\n            </Button>\n          </div>'
+        submit_btn = '          <div style={{ paddingTop: "1.5rem" }}>\n            <Button type="submit" disabled={mutation.isPending}>\n              {mutation.isPending ? t("creating") : t("create")}\n            </Button>\n          </div>'
     else:
-        submit_btn = '          <div style={{ paddingTop: "1.5rem" }}>\n            <button type="submit" disabled={mutation.isPending}\n              className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground h-10 px-4 py-2 hover:bg-primary/90 disabled:opacity-50">\n              {mutation.isPending ? "Creating..." : "Create"}\n            </button>\n          </div>'
+        submit_btn = '          <div style={{ paddingTop: "1.5rem" }}>\n            <button type="submit" disabled={mutation.isPending}\n              className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground h-10 px-4 py-2 hover:bg-primary/90 disabled:opacity-50">\n              {mutation.isPending ? t("creating") : t("create")}\n            </button>\n          </div>'
 
     # Success/error messages
     if ui:
-        success_msg = '          {success && <Alert className="mb-2"><AlertDescription>Created successfully!</AlertDescription></Alert>}'
+        success_msg = '          {success && <Alert className="mb-2"><AlertDescription>{t("createdSuccessfully")}</AlertDescription></Alert>}'
         error_msg = '          {mutation.error && <Alert variant="destructive" className="mb-2"><AlertDescription>{(mutation.error as Error).message}</AlertDescription></Alert>}'
     else:
-        success_msg = '          {success && <div className="mb-2 p-3 rounded-md border bg-green-50 text-green-800 text-sm">Created successfully!</div>}'
+        success_msg = '          {success && <div className="mb-2 p-3 rounded-md border bg-green-50 text-green-800 text-sm">{t("createdSuccessfully")}</div>}'
         error_msg = '          {mutation.error && <div className="mb-2 p-3 rounded-md border border-destructive/50 bg-destructive/5 text-destructive text-sm">{(mutation.error as Error).message}</div>}'
 
     # Card wrapper — clean indentation
@@ -375,12 +377,14 @@ def write_form_page(
 
     dest.write_text(
         f'import {{ useState }} from "react";\n'
+        f'import {{ useTranslation }} from "react-i18next";\n'
         f'import {{ useMutation, useQueryClient }} from "@tanstack/react-query";\n'
         f'import {{ useApiClient }} from "my-api-client/react";\n'
         f'import type {{ Create{entity}Request, {entity} }} from "my-api-client";\n'
         f'{ui_import}'
         f"\n"
         f"export function {component}() {{\n"
+        f"  const {{ t }} = useTranslation();\n"
         f"  const api = useApiClient();\n"
         f"  const queryClient = useQueryClient();\n"
         f"  const [form, setForm] = useState({{ {state_init} }});\n"

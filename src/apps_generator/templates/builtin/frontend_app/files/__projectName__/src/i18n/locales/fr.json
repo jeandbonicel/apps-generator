@@ -1,4 +1,19 @@
 {
   "title": "{{ projectTitle or projectName }}",
-  "welcome": "Bienvenue dans le micro-frontend {{ projectTitle or projectName }}."
+  "welcome": "Bienvenue dans le micro-frontend {{ projectTitle or projectName }}.",
+  "about": "A propos",
+  "aboutDescription": "Ceci est un micro-frontend Module Federation construit avec React, Vite et TypeScript.",
+  "pageNotFound": "Page introuvable",
+  "loading": "Chargement...",
+  "noDataFound": "Aucune donnée trouvée",
+  "failedToLoad": "Échec du chargement",
+  "previous": "Précédent",
+  "next": "Suivant",
+  "page": "Page",
+  "of": "sur",
+  "total": "Total",
+  "showing": "Affichés",
+  "create": "Créer",
+  "creating": "Création...",
+  "createdSuccessfully": "Créé avec succès !"
 }

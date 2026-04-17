@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { pages } from "./pages";
 import "./i18n";
 
@@ -18,13 +19,14 @@ export interface AppProps {
  * loaded via Module Federation (MFE has its own React instance).
  */
 export default function App({ activePage, basePath = "/" }: AppProps = {}) {
+  const { t } = useTranslation();
   const PageComponent = (activePage && pages[activePage]) || pages["default"];
   (window as unknown as Record<string, unknown>).__MFE_BASE_PATH__ = basePath;
 
   return (
     <QueryClientProvider client={queryClient}>
       <div className="app-root">
-        {PageComponent ? <PageComponent /> : <p>Page not found</p>}
+        {PageComponent ? <PageComponent /> : <p>{t("pageNotFound")}</p>}
       </div>
     </QueryClientProvider>
   );
