@@ -96,7 +96,15 @@ Features: `database` (on), `oauth2` (on), `docker` (on), `kubernetes` (on), `cic
 
 **Constraints:** required, unique, maxLength, minLength, min, max, pattern.
 
-**Per resource generates:** Entity (extends TenantAwareEntity with Hibernate @Filter), Repository, Service, Controller (CRUD endpoints), Create/Update/Response DTOs with Bean Validation, Liquibase migration, Integration test (Testcontainers).
+**Per resource generates:** Entity (extends TenantAwareEntity with Hibernate @Filter), Repository, Service, Controller (CRUD endpoints **including PATCH**), Create/Update/**Patch**/Response DTOs with Bean Validation, Liquibase migration, Integration test (Testcontainers).
+
+**Controller endpoints:** `GET /{resource}` (paginated list), `GET /{resource}/{id}`, `POST /{resource}`, `PUT /{resource}/{id}`, `PATCH /{resource}/{id}` (partial update — only non-null fields are applied, used by the `kanban` page type for single-field status changes), `DELETE /{resource}/{id}`.
+
+**Singleton resources** (`"singleton": true` in the resource JSON): the controller collapses to `GET /{resource}` + `PUT /{resource}` (no `{id}`, no pagination), the service lazy-creates the one-per-tenant row on first read, and no `Create`/`Patch` DTOs / integration test are generated. This is the BE shape the `settings` page type expects.
+
+```json
+[{"name": "orgSettings", "singleton": true, "fields": [...]}]
+```
 
 **Tenant isolation:** TenantAwareEntity base class with `@FilterDef`/`@Filter` auto-scopes ALL queries by tenant_id. TenantFilterInterceptor enables filter per-request. Service layer sets tenantId on writes.
 

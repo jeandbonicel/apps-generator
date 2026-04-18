@@ -472,3 +472,223 @@ def test_shared_infra_generated(tmp_path: Path):
     assert "@RestControllerAdvice" in handler
     assert "MethodArgumentNotValidException" in handler
     assert "NotFoundException" in handler
+
+
+# ── PATCH support (new) ──────────────────────────────────────────────────────
+
+
+def test_resource_generates_patch_request_dto(tmp_path: Path):
+    """PatchXxxRequest drops @NotBlank/@NotNull but keeps other constraints."""
+    _, java_root, _ = _generate_with_resource(
+        tmp_path,
+        json.dumps(
+            [
+                {
+                    "name": "product",
+                    "fields": [
+                        {"name": "name", "type": "string", "required": True, "maxLength": 100},
+                        {"name": "stock", "type": "integer", "required": True, "min": 0},
+                        {"name": "active", "type": "boolean"},
+                    ],
+                }
+            ]
+        ),
+    )
+    patch = (java_root / "interfaces" / "rest" / "dto" / "PatchProductRequest.java").read_text()
+    assert "public class PatchProductRequest" in patch
+    # The required-field annotations must NOT appear — every field is optional
+    assert "@NotBlank" not in patch
+    assert "@NotNull" not in patch
+    # But value constraints stay (they only fire when the field is present)
+    assert "@Size(max = 100)" in patch
+    assert "@Min(0)" in patch
+    # All fields present + accessors
+    assert "private String name;" in patch
+    assert "private Integer stock;" in patch
+    assert "private Boolean active;" in patch
+    assert "public String getName()" in patch
+    assert "public void setActive(Boolean active)" in patch
+
+
+def test_resource_generates_patch_endpoint_in_controller(tmp_path: Path):
+    _, java_root, _ = _generate_with_resource(
+        tmp_path,
+        '[{"name":"ticket","fields":[{"name":"title","type":"string"},{"name":"status","type":"string"}]}]',
+    )
+    ctrl = (java_root / "interfaces" / "rest" / "TicketController.java").read_text()
+    assert '@PatchMapping("/{id}")' in ctrl
+    assert "PatchTicketRequest" in ctrl
+    assert "service.patch(id, request)" in ctrl
+    # All other CRUD endpoints are still there
+    assert '@GetMapping("/{id}")' in ctrl
+    assert "@PostMapping" in ctrl
+    assert '@PutMapping("/{id}")' in ctrl
+    assert '@DeleteMapping("/{id}")' in ctrl
+
+
+def test_dtos_import_enum_classes_so_they_compile(tmp_path: Path):
+    """Regression: enum fields need an explicit import in DTOs.
+
+    Enum classes live under ``<pkg>.domain.model``; DTOs live under
+    ``<pkg>.interfaces.rest.dto``. Different package → explicit import
+    required. Before this fix, any resource with an enum field produced
+    Create/Update/Response DTOs that referenced undeclared types and
+    would not compile.
+    """
+    _, java_root, _ = _generate_with_resource(
+        tmp_path,
+        json.dumps(
+            [
+                {
+                    "name": "ticket",
+                    "fields": [
+                        {"name": "title", "type": "string"},
+                        {"name": "priority", "type": "enum", "values": ["low", "high"]},
+                        {"name": "status", "type": "enum", "values": ["open", "done"]},
+                    ],
+                }
+            ]
+        ),
+    )
+    dto_dir = java_root / "interfaces" / "rest" / "dto"
+    for dto in ["CreateTicketRequest", "UpdateTicketRequest", "PatchTicketRequest", "TicketResponse"]:
+        content = (dto_dir / f"{dto}.java").read_text()
+        assert "import com.test.app.domain.model.Priority;" in content, f"{dto} missing Priority import"
+        assert "import com.test.app.domain.model.Status;" in content, f"{dto} missing Status import"
+
+
+def test_resource_service_patch_merges_only_non_null_fields(tmp_path: Path):
+    """service.patch() null-checks every field — null means 'don't touch'."""
+    _, java_root, _ = _generate_with_resource(
+        tmp_path,
+        '[{"name":"ticket","fields":[{"name":"title","type":"string"},{"name":"status","type":"string"}]}]',
+    )
+    svc = (java_root / "domain" / "service" / "TicketService.java").read_text()
+    assert "public Ticket patch(Long id, PatchTicketRequest request)" in svc
+    assert "if (request.getTitle() != null) existing.setTitle(request.getTitle());" in svc
+    assert "if (request.getStatus() != null) existing.setStatus(request.getStatus());" in svc
+
+
+# ── Singleton mode (new) ─────────────────────────────────────────────────────
+
+
+def test_singleton_resource_controller_has_no_id_in_paths(tmp_path: Path):
+    """Singleton controllers expose GET / and PUT / — no {id} segment."""
+    _, java_root, _ = _generate_with_resource(
+        tmp_path,
+        json.dumps(
+            [
+                {
+                    "name": "orgSettings",
+                    "singleton": True,
+                    "fields": [
+                        {"name": "companyName", "type": "string"},
+                        {"name": "billingEmail", "type": "string"},
+                    ],
+                }
+            ]
+        ),
+    )
+    ctrl = (java_root / "interfaces" / "rest" / "OrgSettingsController.java").read_text()
+    # Singleton endpoints
+    assert "@GetMapping\n    public ResponseEntity<OrgSettingsResponse> get()" in ctrl
+    assert "@PutMapping\n    public ResponseEntity<OrgSettingsResponse> update(" in ctrl
+    assert "service.getSingleton()" in ctrl
+    assert "service.updateSingleton(entity)" in ctrl
+    # None of the collection endpoints should be present
+    assert '@GetMapping("/{id}")' not in ctrl
+    assert "@PostMapping" not in ctrl
+    assert "@DeleteMapping" not in ctrl
+    assert "@PatchMapping" not in ctrl
+    assert "PageRequest" not in ctrl  # no pagination for a singleton
+
+
+def test_singleton_resource_service_lazily_creates_row(tmp_path: Path):
+    _, java_root, _ = _generate_with_resource(
+        tmp_path,
+        json.dumps(
+            [
+                {
+                    "name": "orgSettings",
+                    "singleton": True,
+                    "fields": [{"name": "companyName", "type": "string"}],
+                }
+            ]
+        ),
+    )
+    svc = (java_root / "domain" / "service" / "OrgSettingsService.java").read_text()
+    assert "public OrgSettings getSingleton()" in svc
+    assert "public OrgSettings updateSingleton(OrgSettings updated)" in svc
+    # Lazy-create path: if no row exists for this tenant, bootstrap one
+    assert "findAll().stream().findFirst().orElseGet" in svc
+    assert "TenantContext.requireCurrentTenantId()" in svc
+    # No collection-style methods on a singleton service
+    assert "public Page<" not in svc
+    assert "public void delete(" not in svc
+    assert "public OrgSettings patch(" not in svc
+
+
+def test_singleton_skips_create_and_patch_request_dtos(tmp_path: Path):
+    """Singletons have no POST and no PATCH, so those DTOs aren't generated."""
+    _, java_root, _ = _generate_with_resource(
+        tmp_path,
+        json.dumps(
+            [
+                {
+                    "name": "orgSettings",
+                    "singleton": True,
+                    "fields": [{"name": "companyName", "type": "string"}],
+                }
+            ]
+        ),
+    )
+    dto_dir = java_root / "interfaces" / "rest" / "dto"
+    assert not (dto_dir / "CreateOrgSettingsRequest.java").exists()
+    assert not (dto_dir / "PatchOrgSettingsRequest.java").exists()
+    # But Update and Response are still there (needed by PUT / GET)
+    assert (dto_dir / "UpdateOrgSettingsRequest.java").exists()
+    assert (dto_dir / "OrgSettingsResponse.java").exists()
+
+
+def test_singleton_skips_integration_test_generation(tmp_path: Path):
+    """The CRUD integration test template assumes collection endpoints."""
+    _, java_root, _ = _generate_with_resource(
+        tmp_path,
+        json.dumps(
+            [
+                {
+                    "name": "orgSettings",
+                    "singleton": True,
+                    "fields": [{"name": "companyName", "type": "string"}],
+                }
+            ]
+        ),
+    )
+    test_dir = Path(str(java_root).replace("/main/java/", "/test/java/"))
+    assert not (test_dir / "OrgSettingsIntegrationTest.java").exists()
+
+
+def test_mixed_singleton_and_regular_resources(tmp_path: Path):
+    """A project can have both kinds — they don't interfere."""
+    _, java_root, _ = _generate_with_resource(
+        tmp_path,
+        json.dumps(
+            [
+                {"name": "product", "fields": [{"name": "name", "type": "string"}]},
+                {
+                    "name": "appSettings",
+                    "singleton": True,
+                    "fields": [{"name": "darkMode", "type": "boolean"}],
+                },
+            ]
+        ),
+    )
+    # Regular resource: full CRUD + PATCH
+    product_ctrl = (java_root / "interfaces" / "rest" / "ProductController.java").read_text()
+    assert "@PatchMapping" in product_ctrl
+    assert "@PostMapping" in product_ctrl
+    # Singleton: only GET + PUT
+    settings_ctrl = (java_root / "interfaces" / "rest" / "AppSettingsController.java").read_text()
+    assert "@PatchMapping" not in settings_ctrl
+    assert "@PostMapping" not in settings_ctrl
+    assert "service.getSingleton()" in settings_ctrl
