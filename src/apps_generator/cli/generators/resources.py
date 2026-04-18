@@ -84,6 +84,7 @@ def generate_resource_scaffolding(
     for idx, resource in enumerate(resources):
         name = resource.get("name", "")
         fields = resource.get("fields", [])
+        is_singleton = bool(resource.get("singleton", False))
         if not name:
             continue
 
@@ -91,7 +92,8 @@ def generate_resource_scaffolding(
         table_name = snake_case(name) + "s"
         migration_seq = idx + 2  # 001-init is already taken
 
-        console.print(f"  Generating resource: [bold]{entity_name}[/bold]")
+        label = f"{entity_name} (singleton)" if is_singleton else entity_name
+        console.print(f"  Generating resource: [bold]{label}[/bold]")
 
         # Generate enum classes first (needed by entity)
         for f in fields:
@@ -100,26 +102,48 @@ def generate_resource_scaffolding(
 
         _gen_entity(java_root, base_package, entity_name, table_name, fields)
         _gen_repository(java_root, base_package, entity_name)
-        _gen_service(java_root, base_package, entity_name, name)
-        _gen_controller(java_root, base_package, entity_name, name, fields)
-        _gen_create_request(java_root, base_package, entity_name, fields)
+        _gen_service(java_root, base_package, entity_name, name, fields, is_singleton=is_singleton)
+        _gen_controller(java_root, base_package, entity_name, name, fields, is_singleton=is_singleton)
+        # Singleton resources don't accept create/patch — the singleton
+        # record is lazy-initialized and only ever updated.
+        if not is_singleton:
+            _gen_create_request(java_root, base_package, entity_name, fields)
+            _gen_patch_request(java_root, base_package, entity_name, fields)
         _gen_update_request(java_root, base_package, entity_name, fields)
         _gen_response_dto(java_root, base_package, entity_name, fields)
         generate_migration(res_root, entity_name, table_name, fields, migration_seq, name)
 
-        # Integration test (test root mirrors java root: src/main/java → src/test/java)
+        # Integration test (test root mirrors java root: src/main/java → src/test/java).
+        # Singleton resources need a different test shape; skip for now so the
+        # generated test suite never fails to compile.
         test_root = Path(str(java_root).replace("/main/java/", "/test/java/"))
-        if test_root.parent.exists():
+        if test_root.parent.exists() and not is_singleton:
             _gen_integration_test(test_root, base_package, entity_name, name, fields)
 
 
 def _collect_imports(fields: list[dict]) -> list[str]:
-    """Collect extra Java imports needed for field types."""
+    """Collect extra Java imports needed for field types (non-enum)."""
     imports = set()
     for f in fields:
         ft = f.get("type", "string")
         if ft in JAVA_IMPORTS:
             imports.add(JAVA_IMPORTS[ft])
+    return sorted(imports)
+
+
+def _collect_enum_imports(pkg: str, fields: list[dict]) -> list[str]:
+    """Return fully-qualified imports for every enum field's generated class.
+
+    Enum classes live under ``{pkg}.domain.model`` (see :func:`_gen_enum_class`).
+    DTOs under ``{pkg}.interfaces.rest.dto`` need explicit imports to resolve
+    them at compile time — without this, any resource with an enum field
+    produced DTOs that would not compile.
+    """
+    imports: set[str] = set()
+    for f in fields:
+        if f.get("type") == "enum" and f.get("values"):
+            enum_name = pascal_case(f["name"])
+            imports.add(f"{pkg}.domain.model.{enum_name}")
     return sorted(imports)
 
 
@@ -158,8 +182,13 @@ def _ts_type_for_field(f: dict) -> str:
     return TS_TYPES.get(ft, "string")
 
 
-def _java_field(f: dict, with_validation: bool = False) -> str:
-    """Generate a Java field declaration with optional validation annotations."""
+def _java_field(f: dict, with_validation: bool = False, with_required: bool = True) -> str:
+    """Generate a Java field declaration with optional validation annotations.
+
+    ``with_required=False`` drops ``@NotBlank`` / ``@NotNull`` but keeps every
+    other constraint (``@Size``, ``@Min``, ``@Max``, ``@Pattern``) — those only
+    fire when the field is present, which is exactly what PATCH bodies need.
+    """
     ft = f.get("type", "string")
     java_type = _java_type_for_field(f)
     name = camel_case(f["name"])
@@ -174,9 +203,9 @@ def _java_field(f: dict, with_validation: bool = False) -> str:
     lines = []
 
     if with_validation:
-        if required and ft in ("string", "text"):
+        if with_required and required and ft in ("string", "text"):
             lines.append("    @NotBlank")
-        elif required:
+        elif with_required and required:
             lines.append("    @NotNull")
         if max_len or min_len:
             parts = []
@@ -290,12 +319,80 @@ def _gen_repository(java_root: Path, pkg: str, entity: str) -> None:
     console.print(f"    Created: domain/repository/{entity}Repository.java")
 
 
-def _gen_service(java_root: Path, pkg: str, entity: str, name: str) -> None:
-    """Generate service with CRUD operations."""
+def _gen_service(
+    java_root: Path,
+    pkg: str,
+    entity: str,
+    name: str,
+    fields: list[dict] | None = None,
+    is_singleton: bool = False,
+) -> None:
+    """Generate service with CRUD operations.
+
+    Normal resources get ``list``, ``getById``, ``create``, ``update``, ``patch``
+    and ``delete``. Singleton resources get ``getSingleton`` and
+    ``updateSingleton`` instead — the singleton record is lazily created on first
+    GET so the caller never has to bootstrap a row per tenant.
+    """
     dest = java_root / "domain" / "service" / f"{entity}Service.java"
     if dest.exists():
         return
     dest.parent.mkdir(parents=True, exist_ok=True)
+    fields = fields or []
+
+    if is_singleton:
+        dest.write_text(
+            f"package {pkg}.domain.service;\n"
+            f"\n"
+            f"import {pkg}.domain.model.{entity};\n"
+            f"import {pkg}.domain.repository.{entity}Repository;\n"
+            f"import {pkg}.infrastructure.tenant.TenantContext;\n"
+            f"import org.springframework.stereotype.Service;\n"
+            f"import org.springframework.transaction.annotation.Transactional;\n"
+            f"\n"
+            f"/**\n"
+            f" * Singleton resource — exactly one row per tenant, lazily bootstrapped\n"
+            f" * on first read. Hibernate's tenant filter does the scoping for us,\n"
+            f" * so ``findAll`` is safe to call without a WHERE clause.\n"
+            f" */\n"
+            f"@Service\n"
+            f"@Transactional\n"
+            f"public class {entity}Service {{\n"
+            f"\n"
+            f"    private final {entity}Repository repository;\n"
+            f"\n"
+            f"    public {entity}Service({entity}Repository repository) {{\n"
+            f"        this.repository = repository;\n"
+            f"    }}\n"
+            f"\n"
+            f"    @Transactional\n"
+            f"    public {entity} getSingleton() {{\n"
+            f"        return repository.findAll().stream().findFirst().orElseGet(() -> {{\n"
+            f"            {entity} fresh = new {entity}();\n"
+            f"            fresh.setTenantId(TenantContext.requireCurrentTenantId());\n"
+            f"            return repository.save(fresh);\n"
+            f"        }});\n"
+            f"    }}\n"
+            f"\n"
+            f"    public {entity} updateSingleton({entity} updated) {{\n"
+            f"        {entity} existing = getSingleton();\n"
+            f"        updated.setId(existing.getId());\n"
+            f"        updated.setTenantId(existing.getTenantId());\n"
+            f"        return repository.save(updated);\n"
+            f"    }}\n"
+            f"}}\n"
+        )
+        console.print(f"    Created: domain/service/{entity}Service.java (singleton mode)")
+        return
+
+    # Build the patch() body: null-check each field, copy over non-null values.
+    # Booleans are already Boolean (wrapper) so null means "don't change".
+    patch_lines = []
+    for f in fields:
+        pc = pascal_case(f["name"])
+        patch_lines.append(f"        if (request.get{pc}() != null) existing.set{pc}(request.get{pc}());")
+    patch_body = "\n".join(patch_lines) if patch_lines else "        // no fields to patch"
+
     dest.write_text(
         f"package {pkg}.domain.service;\n"
         f"\n"
@@ -303,6 +400,7 @@ def _gen_service(java_root: Path, pkg: str, entity: str, name: str) -> None:
         f"import {pkg}.domain.model.{entity};\n"
         f"import {pkg}.domain.repository.{entity}Repository;\n"
         f"import {pkg}.infrastructure.tenant.TenantContext;\n"
+        f"import {pkg}.interfaces.rest.dto.Patch{entity}Request;\n"
         f"import org.springframework.data.domain.Page;\n"
         f"import org.springframework.data.domain.Pageable;\n"
         f"import org.springframework.stereotype.Service;\n"
@@ -348,6 +446,17 @@ def _gen_service(java_root: Path, pkg: str, entity: str, name: str) -> None:
         f"        return repository.save(updated);\n"
         f"    }}\n"
         f"\n"
+        f"    /**\n"
+        f"     * Partial update — only overwrites fields that are non-null in the\n"
+        f"     * request. Used by the kanban page type for single-field mutations\n"
+        f"     * like status changes on drag-and-drop.\n"
+        f"     */\n"
+        f"    public {entity} patch(Long id, Patch{entity}Request request) {{\n"
+        f"        {entity} existing = getById(id);\n"
+        f"{patch_body}\n"
+        f"        return repository.save(existing);\n"
+        f"    }}\n"
+        f"\n"
         f"    public void delete(Long id) {{\n"
         f"        {entity} existing = getById(id);\n"
         f"        repository.delete(existing);\n"
@@ -382,7 +491,7 @@ def _gen_create_request(java_root: Path, pkg: str, entity: str, fields: list[dic
         if f.get("pattern"):
             validation_imports.add("jakarta.validation.constraints.Pattern")
 
-    all_imports = sorted(set(extra_imports) | validation_imports)
+    all_imports = sorted(set(extra_imports) | validation_imports | set(_collect_enum_imports(pkg, fields)))
     import_lines = "\n".join(f"import {i};" for i in all_imports)
     if import_lines:
         import_lines = "\n" + import_lines
@@ -438,7 +547,7 @@ def _gen_update_request(java_root: Path, pkg: str, entity: str, fields: list[dic
         if f.get("pattern"):
             validation_imports.add("jakarta.validation.constraints.Pattern")
 
-    all_imports = sorted(set(extra_imports) | validation_imports)
+    all_imports = sorted(set(extra_imports) | validation_imports | set(_collect_enum_imports(pkg, fields)))
     import_lines = "\n".join(f"import {i};" for i in all_imports)
     if import_lines:
         import_lines = "\n" + import_lines
@@ -468,6 +577,62 @@ def _gen_update_request(java_root: Path, pkg: str, entity: str, fields: list[dic
     console.print(f"    Created: interfaces/rest/dto/Update{entity}Request.java")
 
 
+def _gen_patch_request(java_root: Path, pkg: str, entity: str, fields: list[dict]) -> None:
+    """Generate PatchXxxRequest DTO — every field optional, keeps other constraints.
+
+    PATCH bodies carry only the fields the caller wants to change (e.g. the
+    kanban board sending just ``{"status": "done"}``). Dropping
+    ``@NotBlank`` / ``@NotNull`` makes missing fields legal; ``@Size``,
+    ``@Min``, ``@Max``, ``@Pattern`` are preserved and only fire when the
+    field is actually present.
+    """
+    dest = java_root / "interfaces" / "rest" / "dto" / f"Patch{entity}Request.java"
+    if dest.exists():
+        return
+    dest.parent.mkdir(parents=True, exist_ok=True)
+
+    extra_imports = _collect_imports(fields)
+    validation_imports: set[str] = set()
+    for f in fields:
+        if f.get("maxLength") or f.get("minLength"):
+            validation_imports.add("jakarta.validation.constraints.Size")
+        if f.get("min") is not None:
+            validation_imports.add("jakarta.validation.constraints.Min")
+        if f.get("max") is not None:
+            validation_imports.add("jakarta.validation.constraints.Max")
+        if f.get("pattern"):
+            validation_imports.add("jakarta.validation.constraints.Pattern")
+
+    all_imports = sorted(set(extra_imports) | validation_imports | set(_collect_enum_imports(pkg, fields)))
+    import_lines = "\n".join(f"import {i};" for i in all_imports)
+    if import_lines:
+        import_lines = "\n" + import_lines
+
+    field_lines = "\n\n".join(_java_field(f, with_validation=True, with_required=False) for f in fields)
+
+    accessors: list[str] = []
+    for f in fields:
+        java_type = _java_type_for_field(f)
+        name = camel_case(f["name"])
+        getter = f"get{pascal_case(f['name'])}"
+        setter = f"set{pascal_case(f['name'])}"
+        accessors.append(f"    public {java_type} {getter}() {{ return {name}; }}")
+        accessors.append(f"    public void {setter}({java_type} {name}) {{ this.{name} = {name}; }}")
+
+    dest.write_text(
+        f"package {pkg}.interfaces.rest.dto;\n"
+        f"{import_lines}\n"
+        f"\n"
+        f"public class Patch{entity}Request {{\n"
+        f"\n"
+        f"{field_lines}\n"
+        f"\n"
+        f"{''.join(chr(10) + a + chr(10) for a in accessors)}"
+        f"}}\n"
+    )
+    console.print(f"    Created: interfaces/rest/dto/Patch{entity}Request.java")
+
+
 def _gen_response_dto(java_root: Path, pkg: str, entity: str, fields: list[dict]) -> None:
     """Generate response DTO with all fields including id and timestamps."""
     dest = java_root / "interfaces" / "rest" / "dto" / f"{entity}Response.java"
@@ -476,7 +641,8 @@ def _gen_response_dto(java_root: Path, pkg: str, entity: str, fields: list[dict]
     dest.parent.mkdir(parents=True, exist_ok=True)
 
     extra_imports = _collect_imports(fields)
-    import_lines = "\n".join(f"import {i};" for i in extra_imports)
+    all_imports = sorted(set(extra_imports) | set(_collect_enum_imports(pkg, fields)))
+    import_lines = "\n".join(f"import {i};" for i in all_imports)
     if import_lines:
         import_lines = "\n" + import_lines
 
@@ -524,20 +690,31 @@ def _gen_response_dto(java_root: Path, pkg: str, entity: str, fields: list[dict]
     console.print(f"    Created: interfaces/rest/dto/{entity}Response.java")
 
 
-def _gen_controller(java_root: Path, pkg: str, entity: str, name: str, fields: list[dict]) -> None:
-    """Generate REST controller with CRUD endpoints."""
+def _gen_controller(
+    java_root: Path,
+    pkg: str,
+    entity: str,
+    name: str,
+    fields: list[dict],
+    is_singleton: bool = False,
+) -> None:
+    """Generate REST controller with CRUD endpoints.
+
+    * Normal resources: list, getById, create (POST), update (PUT),
+      **patch (PATCH)**, delete.
+    * Singleton resources: ``GET /{resource}`` returns the one record,
+      ``PUT /{resource}`` upserts it. No list, no id in path, no POST,
+      no DELETE.
+    """
     dest = java_root / "interfaces" / "rest" / f"{entity}Controller.java"
     if dest.exists():
         return
     dest.parent.mkdir(parents=True, exist_ok=True)
 
-    camel_case(name)
-
     # Build the mapping from request DTO to entity
     set_lines = []
     resp_lines = []
     for f in fields:
-        camel_case(f["name"])
         pc = pascal_case(f["name"])
         set_lines.append(f"        entity.set{pc}(request.get{pc}());")
         resp_lines.append(f"        response.set{pc}(entity.get{pc}());")
@@ -545,6 +722,61 @@ def _gen_controller(java_root: Path, pkg: str, entity: str, name: str, fields: l
     to_entity = "\n".join(set_lines)
     to_response = "\n".join(resp_lines)
 
+    if is_singleton:
+        # Singleton controller — just GET + PUT on the collection path.
+        dest.write_text(
+            f"package {pkg}.interfaces.rest;\n"
+            f"\n"
+            f"import {pkg}.domain.model.{entity};\n"
+            f"import {pkg}.domain.service.{entity}Service;\n"
+            f"import {pkg}.interfaces.rest.dto.Update{entity}Request;\n"
+            f"import {pkg}.interfaces.rest.dto.{entity}Response;\n"
+            f"import jakarta.validation.Valid;\n"
+            f"import org.springframework.http.ResponseEntity;\n"
+            f"import org.springframework.web.bind.annotation.*;\n"
+            f"\n"
+            f"@RestController\n"
+            f'@RequestMapping("/{name}")\n'
+            f"public class {entity}Controller {{\n"
+            f"\n"
+            f"    private final {entity}Service service;\n"
+            f"\n"
+            f"    public {entity}Controller({entity}Service service) {{\n"
+            f"        this.service = service;\n"
+            f"    }}\n"
+            f"\n"
+            f"    @GetMapping\n"
+            f"    public ResponseEntity<{entity}Response> get() {{\n"
+            f"        return ResponseEntity.ok(toResponse(service.getSingleton()));\n"
+            f"    }}\n"
+            f"\n"
+            f"    @PutMapping\n"
+            f"    public ResponseEntity<{entity}Response> update(\n"
+            f"            @Valid @RequestBody Update{entity}Request request) {{\n"
+            f"        {entity} entity = new {entity}();\n"
+            f"{to_entity}\n"
+            f"        {entity} saved = service.updateSingleton(entity);\n"
+            f"        return ResponseEntity.ok(toResponse(saved));\n"
+            f"    }}\n"
+            f"\n"
+            f"    private {entity}Response toResponse({entity} entity) {{\n"
+            f"        {entity}Response response = new {entity}Response();\n"
+            f"        response.setId(entity.getId());\n"
+            f"        response.setTenantId(entity.getTenantId());\n"
+            f"{to_response}\n"
+            f"        response.setCreatedAt(entity.getCreatedAt());\n"
+            f"        response.setUpdatedAt(entity.getUpdatedAt());\n"
+            f"        return response;\n"
+            f"    }}\n"
+            f"}}\n"
+        )
+        console.print(f"    Created: interfaces/rest/{entity}Controller.java (singleton mode)")
+        return
+
+    # Normal CRUD controller — now includes PATCH.
+    # For PATCH, only copy non-null fields from the request (null = "don't
+    # touch"). The service re-applies the same predicate on the fetched
+    # entity; the controller just forwards the DTO.
     dest.write_text(
         f"package {pkg}.interfaces.rest;\n"
         f"\n"
@@ -552,6 +784,7 @@ def _gen_controller(java_root: Path, pkg: str, entity: str, name: str, fields: l
         f"import {pkg}.domain.service.{entity}Service;\n"
         f"import {pkg}.interfaces.rest.dto.Create{entity}Request;\n"
         f"import {pkg}.interfaces.rest.dto.Update{entity}Request;\n"
+        f"import {pkg}.interfaces.rest.dto.Patch{entity}Request;\n"
         f"import {pkg}.interfaces.rest.dto.{entity}Response;\n"
         f"import jakarta.validation.Valid;\n"
         f"import org.springframework.data.domain.Page;\n"
@@ -600,6 +833,13 @@ def _gen_controller(java_root: Path, pkg: str, entity: str, name: str, fields: l
         f"{to_entity.replace('Create', 'Update')}\n"
         f"        {entity} saved = service.update(id, entity);\n"
         f"        return ResponseEntity.ok(toResponse(saved));\n"
+        f"    }}\n"
+        f"\n"
+        f'    @PatchMapping("/{{id}}")\n'
+        f"    public ResponseEntity<{entity}Response> patch(\n"
+        f"            @PathVariable Long id,\n"
+        f"            @Valid @RequestBody Patch{entity}Request request) {{\n"
+        f"        return ResponseEntity.ok(toResponse(service.patch(id, request)));\n"
         f"    }}\n"
         f"\n"
         f'    @DeleteMapping("/{{id}}")\n'
