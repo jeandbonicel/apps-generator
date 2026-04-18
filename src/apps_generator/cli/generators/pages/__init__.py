@@ -37,6 +37,7 @@ _BUILTIN_TYPES = (
     "edit_type",
     "settings_type",
     "tree_type",
+    "kanban_type",
 )
 for _name in _BUILTIN_TYPES:
     import_module(f"{__name__}.{_name}")
