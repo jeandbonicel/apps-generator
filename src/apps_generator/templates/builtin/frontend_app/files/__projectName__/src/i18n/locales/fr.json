@@ -18,5 +18,14 @@
   "createdSuccessfully": "Créé avec succès !",
   "yes": "Oui",
   "no": "Non",
-  "missingId": "Aucun ID fourni"
+  "missingId": "Aucun ID fourni",
+  "save": "Enregistrer",
+  "saving": "Enregistrement...",
+  "updatedSuccessfully": "Mis à jour avec succès !",
+  "delete": "Supprimer",
+  "deleting": "Suppression...",
+  "confirmDelete": "Êtes-vous sûr ?",
+  "confirmDeleteDesc": "Cette action est irréversible.",
+  "confirm": "Confirmer",
+  "cancel": "Annuler"
 }
