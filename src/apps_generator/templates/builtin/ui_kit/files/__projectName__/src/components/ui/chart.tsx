@@ -1,4 +1,3 @@
-{% raw %}
 import * as React from "react";
 import { ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { cn } from "@/lib/utils";
@@ -23,21 +22,20 @@ interface ChartContainerProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const ChartContainer = React.forwardRef<HTMLDivElement, ChartContainerProps>(
   ({ config, className, children, ...props }, ref) => {
-    // Inject chart colors as CSS variables
-    const style: React.CSSProperties = {};
+    // Inject chart colors as CSS variables. Build the map as a plain string
+    // record so arbitrary custom-property keys (``--color-<field>``) type-check,
+    // then cast to CSSProperties when passing to `style` — React/DOM accept
+    // unknown custom properties at runtime.
+    const cssVars: Record<string, string> = {};
     Object.entries(config).forEach(([key, value], index) => {
-      if (value.color) {
-        style[`--color-${key}` as string] = value.color;
-      } else {
-        style[`--color-${key}` as string] = `hsl(var(--chart-${index + 1}))`;
-      }
+      cssVars[`--color-${key}`] = value.color ?? `hsl(var(--chart-${index + 1}))`;
     });
 
     return (
       <div
         ref={ref}
         className={cn("flex aspect-video justify-center text-xs", className)}
-        style={style}
+        style={cssVars as React.CSSProperties}
         {...props}
       >
         <ResponsiveContainer width="100%" height="100%">
@@ -93,19 +91,19 @@ function ChartTooltipContent({
               {indicator === "dot" && (
                 <span
                   className="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: color }}
+                  style={ { backgroundColor: color } }
                 />
               )}
               {indicator === "line" && (
                 <span
                   className="h-0.5 w-3 shrink-0 rounded-full"
-                  style={{ backgroundColor: color }}
+                  style={ { backgroundColor: color } }
                 />
               )}
               {indicator === "dashed" && (
                 <span
                   className="h-0.5 w-3 shrink-0 rounded-full border-b-2 border-dashed"
-                  style={{ borderColor: color }}
+                  style={ { borderColor: color } }
                 />
               )}
               <span className="text-muted-foreground">{displayLabel}</span>
@@ -149,7 +147,7 @@ function ChartLegendContent({ payload, config }: ChartLegendContentProps) {
           <div key={index} className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <span
               className="h-2.5 w-2.5 shrink-0 rounded-full"
-              style={{ backgroundColor: entry.color }}
+              style={ { backgroundColor: entry.color } }
             />
             {label}
           </div>
@@ -159,7 +157,13 @@ function ChartLegendContent({ payload, config }: ChartLegendContentProps) {
   );
 }
 
-function ChartLegend(props: React.ComponentProps<typeof Legend>) {
+// Recharts' `Legend` class exposes a `LegacyRef<ReactElement>` typing that
+// is not compatible with `LegacyRef<Legend>` when we spread the whole
+// `ComponentProps` bag (it's an open generics bug in @types/recharts v2).
+// We don't forward a ref here, so strip it before spreading.
+type ChartLegendProps = Omit<React.ComponentProps<typeof Legend>, "ref">;
+
+function ChartLegend(props: ChartLegendProps) {
   return <Legend content={<ChartLegendContent />} {...props} />;
 }
 
@@ -170,4 +174,3 @@ export {
   ChartLegend,
   ChartLegendContent,
 };
-{% endraw %}

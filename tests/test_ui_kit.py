@@ -179,6 +179,30 @@ def test_tailwind_preset_exposes_sidebar_colors(uikit_src: Path) -> None:
 # ── Stories ────────────────────────────────────────────────────────────────
 
 
+def test_generated_output_has_no_jinja_residue(uikit_src: Path) -> None:
+    """Nothing in the generated project should still contain Jinja markers.
+
+    We burned on this once — a ``{% raw %}`` block that was never processed
+    leaked into emitted .tsx/.json/.ts files, breaking them at parse time.
+    Scan every generated source file for tell-tale Jinja syntax.
+    """
+    bad_patterns = ["{% raw %}", "{% endraw %}"]
+    project_root = uikit_src.parent
+    scan_extensions = {".ts", ".tsx", ".js", ".jsx", ".json", ".css", ".md"}
+    offenders: list[tuple[str, str]] = []
+    for path in project_root.rglob("*"):
+        if not path.is_file() or path.suffix not in scan_extensions:
+            continue
+        # Skip node_modules / dist / .git if a previous run populated them
+        if any(part in {"node_modules", "dist", ".git"} for part in path.parts):
+            continue
+        content = path.read_text(errors="ignore")
+        for pat in bad_patterns:
+            if pat in content:
+                offenders.append((str(path.relative_to(project_root)), pat))
+    assert not offenders, f"Jinja residue in generated output: {offenders}"
+
+
 def test_phase_0_stories_exist(uikit_src: Path) -> None:
     stories_dir = uikit_src.parent / "stories"
     expected_stories = [
