@@ -38,6 +38,7 @@ _BUILTIN_TYPES = (
     "settings_type",
     "tree_type",
     "kanban_type",
+    "calendar_type",
 )
 for _name in _BUILTIN_TYPES:
     import_module(f"{__name__}.{_name}")

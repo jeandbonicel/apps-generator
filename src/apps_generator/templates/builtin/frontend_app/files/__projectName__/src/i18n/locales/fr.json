@@ -27,5 +27,6 @@
   "confirmDelete": "Êtes-vous sûr ?",
   "confirmDeleteDesc": "Cette action est irréversible.",
   "confirm": "Confirmer",
-  "cancel": "Annuler"
+  "cancel": "Annuler",
+  "calendarNeedsDateField": "Ce calendrier n'a pas de champ de date configuré."
 }
