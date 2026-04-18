@@ -28,7 +28,7 @@ from .registry import PageContext, PageTypeInfo, PageTypeRegistry, get_registry
 # ``list``) via the package-attribute binding that submodule imports trigger.
 # Adding a new built-in is as simple as dropping a ``<name>_type.py`` module
 # in this package.
-_BUILTIN_TYPES = ("list_type", "form_type", "dashboard_type", "detail_type")
+_BUILTIN_TYPES = ("list_type", "form_type", "dashboard_type", "detail_type", "grid_type")
 for _name in _BUILTIN_TYPES:
     import_module(f"{__name__}.{_name}")
 
