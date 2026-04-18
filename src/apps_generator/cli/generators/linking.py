@@ -191,11 +191,35 @@ export default {{
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         }},
+        sidebar: {{
+          DEFAULT: "hsl(var(--sidebar-background))",
+          foreground: "hsl(var(--sidebar-foreground))",
+          primary: "hsl(var(--sidebar-primary))",
+          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
+          accent: "hsl(var(--sidebar-accent))",
+          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
+          border: "hsl(var(--sidebar-border))",
+          ring: "hsl(var(--sidebar-ring))",
+        }},
       }},
       borderRadius: {{
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      }},
+      keyframes: {{
+        "accordion-down": {{
+          from: {{ height: "0" }},
+          to: {{ height: "var(--radix-accordion-content-height)" }},
+        }},
+        "accordion-up": {{
+          from: {{ height: "var(--radix-accordion-content-height)" }},
+          to: {{ height: "0" }},
+        }},
+      }},
+      animation: {{
+        "accordion-down": "accordion-down 0.2s ease-out",
+        "accordion-up": "accordion-up 0.2s ease-out",
       }},
     }},
   }},
@@ -223,6 +247,32 @@ export default {{
     "duration-300", "ease-in-out",
     "translate-x-0", "-translate-x-full", "translate-y-full", "-translate-y-full",
     "sr-only",
+    // popover, calendar, date-picker, combobox, command
+    "w-72", "bg-popover", "text-popover-foreground", "shadow-md", "outline-none",
+    "data-[state=open]:animate-in", "data-[state=closed]:animate-out",
+    "data-[state=closed]:fade-out-0", "data-[state=open]:fade-in-0",
+    "data-[state=closed]:zoom-out-95", "data-[state=open]:zoom-in-95",
+    "w-auto", "p-0", "p-3", "max-h-[300px]", "overflow-y-auto", "overflow-x-hidden",
+    "justify-start", "font-normal", "text-center", "py-6",
+    // form
+    "space-y-2", "text-destructive",
+    // radio-group
+    "aspect-square", "h-4", "w-4", "border-primary", "text-primary",
+    "focus:outline-none", "focus-visible:ring-2", "h-2.5", "w-2.5", "fill-current",
+    // alert-dialog
+    "grid", "max-w-lg", "bg-background", "p-6", "shadow-lg", "duration-200",
+    "sm:rounded-lg",
+    // collapsible, accordion
+    "animate-accordion-down", "animate-accordion-up",
+    "data-[state=open]:rotate-180", "transition-transform",
+    // sidebar
+    "bg-sidebar", "text-sidebar-foreground", "border-sidebar-border", "ring-sidebar-ring",
+    "hover:bg-sidebar-accent", "hover:text-sidebar-accent-foreground",
+    "data-[active=true]:bg-sidebar-accent", "data-[active=true]:text-sidebar-accent-foreground",
+    "min-h-svh", "peer/menu-button", "group/menu-item",
+    // navigation-menu
+    "group", "data-[active]:bg-accent/50", "data-[state=open]:bg-accent/50",
+    "origin-top-center", "md:w-auto",
   ],
   plugins: [],
 }};
