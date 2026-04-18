@@ -33,7 +33,7 @@ appgen generate api-domain -o ./product-service \
   -s 'resources=[{"name":"product","fields":[{"name":"name","type":"string","required":true,"maxLength":255},{"name":"price","type":"decimal","required":true,"min":0},{"name":"status","type":"enum","required":true,"values":["active","inactive","archived"]},{"name":"active","type":"boolean"}]}]' \
   --gateway ./gateway --api-client ./api-client
 
-# 6. Micro-frontend with data-aware pages (dashboard + list + form)
+# 6. Micro-frontend with data-aware pages (dashboard + list + form + detail)
 appgen generate frontend-app -o ./products -s projectName=products -s devPort=5001 \
   -s 'pages=[
     {"path":"overview","label":"Overview","resource":"product","type":"dashboard","fields":[
@@ -45,6 +45,12 @@ appgen generate frontend-app -o ./products -s projectName=products -s devPort=50
       {"name":"name","type":"string","required":true},
       {"name":"price","type":"decimal","required":true},
       {"name":"active","type":"boolean"}
+    ]},
+    {"path":"view","label":"Product Details","resource":"product","type":"detail","fields":[
+      {"name":"name","type":"string"},
+      {"name":"price","type":"decimal"},
+      {"name":"active","type":"boolean"},
+      {"name":"description","type":"text"}
     ]},
     {"path":"create","label":"New Product","resource":"product","type":"form","fields":[
       {"name":"name","type":"string","required":true},
