@@ -101,9 +101,7 @@ def test_all_expected_component_files_exist(uikit_src: Path) -> None:
         ("navigation-menu", ["NavigationMenu", "NavigationMenuList", "NavigationMenuTrigger"]),
     ],
 )
-def test_component_exports_expected_symbols(
-    uikit_src: Path, component: str, expected_exports: list[str]
-) -> None:
+def test_component_exports_expected_symbols(uikit_src: Path, component: str, expected_exports: list[str]) -> None:
     content = (uikit_src / "components" / "ui" / f"{component}.tsx").read_text()
     for sym in expected_exports:
         assert f"{sym}" in content, f"{component}.tsx missing symbol {sym!r}"
