@@ -86,11 +86,16 @@ def _render_input(field: dict, ui: bool) -> str:
                 f"        </div>"
             )
         if ft == "date":
+            # Calendar-popover picker from ui-kit (Phase 0)
             return (
                 f'        <div className="space-y-2">\n'
                 f'          <Label htmlFor="{fname}">{flabel}{req_star}</Label>\n'
-                f'          <Input id="{fname}" type="date"\n'
-                f"            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{'required ' if required else ''}/>\n"
+                f"          <DatePicker\n"
+                f'            id="{fname}"\n'
+                f"            value={{form.{fname} ? new Date(form.{fname}) : undefined}}\n"
+                f'            onChange={{(d) => setForm(f => ({{...f, {fname}: d ? d.toISOString().slice(0, 10) : ""}}))}}\n'
+                f'            placeholder="Select {flabel}..."\n'
+                f"          />\n"
                 f"        </div>"
             )
         if ft == "datetime":
@@ -199,7 +204,8 @@ def emit_settings(page: dict, ctx: PageContext) -> None:
         ui_import = (
             f"import {{ Button, Input, Label, Textarea, Checkbox, "
             f"Card, CardContent, CardHeader, CardTitle, Alert, AlertDescription, "
-            f'Accordion, AccordionItem, AccordionTrigger, AccordionContent }} from "{ui}";\n'
+            f"Accordion, AccordionItem, AccordionTrigger, AccordionContent, "
+            f'DatePicker }} from "{ui}";\n'
         )
     else:
         ui_import = ""
