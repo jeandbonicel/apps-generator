@@ -134,6 +134,7 @@ Features: `docker` (on), `kubernetes` (on), `cicd` (on), `tailwind` (on).
 - `settings` — configuration form for a **singleton** resource. `GET /{resource}` returns one record, `PUT /{resource}` updates it — no `id` in the URL. Fields can be grouped via an optional `group` key and render as shadcn `Accordion` items (Phase 0), all expanded by default; ungrouped fields drop into a "General" section. Plain-HTML fallback uses bordered `<section>` headings instead of Accordion. No delete.
 - `tree` — hierarchical view for a resource with a nullable `parentId` field. Fetches up to 1000 records via `GET /{resource}`, builds a nested tree client-side (dangling children become roots if pagination cuts off an ancestor), renders with [`react-arborist`](https://github.com/brimdata/react-arborist) — collapsible, keyboard-navigable, virtualized. Node label = first string field (falls back to `id`). Clicking a leaf navigates to `./view?id={id}` (the detail-page convention). Requires `react-arborist` (auto-added to frontend-app `dependencies`).
 - `kanban` — drag-and-drop board grouped by a status enum. Columns are the enum's `values`; dropping a card PATCHes the record's status field with the new column value, with an optimistic local update so the UI never lags. Column resolution: explicit `statusField` > field named `status`/`state`/`stage`/`phase` > first enum field > single "Backlog" fallback. Uses [`@dnd-kit/core`](https://dndkit.com/) + `@dnd-kit/sortable` + `@dnd-kit/utilities` — one `SortableContext` per column, 4 px pointer-activation distance.
+- `calendar` — month / week / day calendar view via [`@schedule-x/react`](https://schedule-x.dev/). Fetches up to 1000 records and transforms them into schedule-x events. Date-field resolution: explicit `dateField` > field named `date`/`startDate`/`start`/`when` > first `date`/`datetime` field. Optional `endField` falls back to the next temporal field, or to the same field as start (single-cell event). Title = first string field (or `id`). `datetime` values are sliced to 16 chars and the ISO `T` separator is swapped for a space to match schedule-x's `YYYY-MM-DD HH:mm` format; `date` values are sliced to 10 chars. Records with null start are skipped. Graceful placeholder when the resource has no `date`/`datetime` field.
 
 **Smart form features:**
 - `enum` fields with `values` array → `<select>` dropdown with predefined options
@@ -199,7 +200,8 @@ src/apps_generator/
 │       │   ├── edit_type.py
 │       │   ├── settings_type.py
 │       │   ├── tree_type.py
-│       │   └── kanban_type.py
+│       │   ├── kanban_type.py
+│       │   └── calendar_type.py
 │       ├── resources.py      # Java CRUD scaffolding
 │       ├── types.py          # TypeScript type generation
 │       ├── migrations.py     # Liquibase migrations
@@ -245,7 +247,7 @@ All templates use the shadcn neutral theme (near-black primary, not blue):
 - Translation files: `src/i18n/locales/en.json` and `fr.json`
 - Shell syncs language to MFEs via `window.__SHELL_LANGUAGE__` + event
 - All UI strings use `t("key")` — no hardcoded English in components
-- Generated pages (list/form/dashboard/detail/grid/edit/settings/tree/kanban) use `useTranslation()` for all UI text
+- Generated pages (list/form/dashboard/detail/grid/edit/settings/tree/kanban/calendar) use `useTranslation()` for all UI text
 - Translation keys: loading, noDataFound, previous, next, create, creating, createdSuccessfully, failedToLoad, etc.
 
 **Adding a new language:** Copy `en.json` to `<lang>.json`, translate values, add to `i18n/index.ts` resources.

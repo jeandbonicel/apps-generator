@@ -27,5 +27,6 @@
   "confirmDelete": "Are you sure?",
   "confirmDeleteDesc": "This action cannot be undone.",
   "confirm": "Confirm",
-  "cancel": "Cancel"
+  "cancel": "Cancel",
+  "calendarNeedsDateField": "This calendar has no date field configured."
 }
