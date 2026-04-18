@@ -50,6 +50,49 @@ export {
   ChartLegend, ChartLegendContent, type ChartConfig,
 } from "./components/ui/chart";
 
+// Overlays & disclosures
+export { Popover, PopoverTrigger, PopoverAnchor, PopoverContent } from "./components/ui/popover";
+export {
+  AlertDialog, AlertDialogPortal, AlertDialogOverlay, AlertDialogTrigger,
+  AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogAction, AlertDialogCancel,
+} from "./components/ui/alert-dialog";
+export { Collapsible, CollapsibleTrigger, CollapsibleContent } from "./components/ui/collapsible";
+export {
+  Accordion, AccordionItem, AccordionTrigger, AccordionContent,
+} from "./components/ui/accordion";
+
+// Data entry
+export { Calendar, type CalendarProps } from "./components/ui/calendar";
+export { DatePicker, type DatePickerProps } from "./components/ui/date-picker";
+export { RadioGroup, RadioGroupItem } from "./components/ui/radio-group";
+export { Combobox, type ComboboxProps, type ComboboxOption } from "./components/ui/combobox";
+export {
+  Form, FormField, FormItem, FormLabel, FormControl,
+  FormDescription, FormMessage, useFormField,
+} from "./components/ui/form";
+
+// Command palette
+export {
+  Command, CommandDialog, CommandInput, CommandList, CommandEmpty,
+  CommandGroup, CommandItem, CommandShortcut, CommandSeparator,
+} from "./components/ui/command";
+
+// Navigation
+export {
+  NavigationMenu, NavigationMenuList, NavigationMenuItem,
+  NavigationMenuContent, NavigationMenuTrigger, NavigationMenuLink,
+  NavigationMenuIndicator, NavigationMenuViewport,
+  navigationMenuTriggerStyle,
+} from "./components/ui/navigation-menu";
+export {
+  Sidebar, SidebarProvider, SidebarTrigger, SidebarInset,
+  SidebarHeader, SidebarFooter, SidebarContent,
+  SidebarGroup, SidebarGroupLabel, SidebarGroupContent,
+  SidebarMenu, SidebarMenuItem, SidebarMenuButton,
+  sidebarMenuButtonVariants, useSidebar,
+} from "./components/ui/sidebar";
+
 // Layout
 export { Page } from "./components/layout/Page";
 export { PageHeader } from "./components/layout/PageHeader";
