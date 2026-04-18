@@ -15,5 +15,8 @@
   "showing": "Affichés",
   "create": "Créer",
   "creating": "Création...",
-  "createdSuccessfully": "Créé avec succès !"
+  "createdSuccessfully": "Créé avec succès !",
+  "yes": "Oui",
+  "no": "Non",
+  "missingId": "Aucun ID fourni"
 }

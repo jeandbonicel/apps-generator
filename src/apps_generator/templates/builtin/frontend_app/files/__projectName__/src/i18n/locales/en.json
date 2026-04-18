@@ -15,5 +15,8 @@
   "showing": "Showing",
   "create": "Create",
   "creating": "Creating...",
-  "createdSuccessfully": "Created successfully!"
+  "createdSuccessfully": "Created successfully!",
+  "yes": "Yes",
+  "no": "No",
+  "missingId": "No ID provided"
 }

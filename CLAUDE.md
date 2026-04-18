@@ -128,6 +128,7 @@ Features: `docker` (on), `kubernetes` (on), `cicd` (on), `tailwind` (on).
 - `list` — table with useApiClient + useQuery, pagination, Card wrapper. Null-safe rendering (shows "—" for null values).
 - `form` — create form with type-aware inputs (datetime picker, number, textarea, checkbox, enum select dropdowns). Resource lookups auto-detected (e.g. `dogName` field renders as dropdown fetching from `/dog` API). useMutation, Card wrapper.
 - `dashboard` — stat cards + bar chart (Recharts) + recent items table
+- `detail` — read-only single-record view as a definition list inside a Card. Reads `id` from `?id=` query string, fetches `GET /{resource}/{id}` via useQuery. Type-aware value rendering: decimal → `toFixed(2)`, date/datetime → `toLocaleDateString()`, boolean → Badge ("Yes"/"No"), enum → Badge with value, text → `whitespace-pre-wrap`. Shows a Skeleton placeholder per field while loading; falls back to `t("missingId")` when `id` is absent.
 
 **Smart form features:**
 - `enum` fields with `values` array → `<select>` dropdown with predefined options
@@ -181,7 +182,14 @@ src/apps_generator/
 │   ├── sync.py              # Sync types from OpenAPI
 │   ├── docker_compose.py    # Docker compose generation
 │   └── generators/
-│       ├── pages.py          # React page generation (list/form/dashboard)
+│       ├── pages/            # React page generation package
+│       │   ├── __init__.py   # parse_pages, find_project_root, dispatcher
+│       │   ├── registry.py   # PageTypeRegistry + PageContext
+│       │   ├── base.py       # page_target() + detect_lookup() helpers
+│       │   ├── list_type.py
+│       │   ├── form_type.py
+│       │   ├── dashboard_type.py
+│       │   └── detail_type.py
 │       ├── resources.py      # Java CRUD scaffolding
 │       ├── types.py          # TypeScript type generation
 │       ├── migrations.py     # Liquibase migrations
@@ -227,7 +235,7 @@ All templates use the shadcn neutral theme (near-black primary, not blue):
 - Translation files: `src/i18n/locales/en.json` and `fr.json`
 - Shell syncs language to MFEs via `window.__SHELL_LANGUAGE__` + event
 - All UI strings use `t("key")` — no hardcoded English in components
-- Generated pages (list/form/dashboard) use `useTranslation()` for all UI text
+- Generated pages (list/form/dashboard/detail) use `useTranslation()` for all UI text
 - Translation keys: loading, noDataFound, previous, next, create, creating, createdSuccessfully, failedToLoad, etc.
 
 **Adding a new language:** Copy `en.json` to `<lang>.json`, translate values, add to `i18n/index.ts` resources.
