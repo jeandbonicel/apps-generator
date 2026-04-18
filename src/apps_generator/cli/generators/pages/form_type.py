@@ -30,7 +30,11 @@ def emit_form(page: dict, ctx: PageContext) -> None:
 
     # ui-kit imports
     if ui:
-        ui_import = f'import {{ Button, Input, Label, Textarea, Checkbox, Card, CardContent, CardHeader, CardTitle, Alert, AlertDescription }} from "{ui}";\n'
+        ui_import = (
+            f"import {{ Button, Input, Label, Textarea, Checkbox, "
+            f"Card, CardContent, CardHeader, CardTitle, Alert, AlertDescription, "
+            f'DatePicker, Combobox }} from "{ui}";\n'
+        )
     else:
         ui_import = ""
 
@@ -67,7 +71,9 @@ def emit_form(page: dict, ctx: PageContext) -> None:
         lookup = f.get("lookup")
 
         if ui:
-            # Lookup field -> Select dropdown
+            # Lookup field -> typeahead Combobox (ui-kit Phase 0).
+            # Native <select> gets unusable once the option list grows; Combobox
+            # has a built-in search input so it scales.
             if lookup:
                 lk_res = lookup["resource"]
                 lk_var = camel_case(lk_res) + "Options"
@@ -79,11 +85,13 @@ def emit_form(page: dict, ctx: PageContext) -> None:
                     f"          {{{lk_var}.length === 0 ? (\n"
                     f'            <p className="text-sm text-muted-foreground">No {title_case(lk_res)}s found. <a href="../{lk_res}s/new" className="underline text-primary">Create one first</a>.</p>\n'
                     f"          ) : (\n"
-                    f'            <select id="{fname}" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"\n'
-                    f"              value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{'required ' if required else ''}>\n"
-                    f'              <option value="">Select {flabel}...</option>\n'
-                    f"              {{{lk_var}.map((opt: any) => <option key={{opt.{lk_val}}} value={{opt.{lk_val}}}>{{opt.{lk_label}}}</option>)}}\n"
-                    f"            </select>\n"
+                    f"            <Combobox\n"
+                    f'              id="{fname}"\n'
+                    f"              options={{{lk_var}.map((opt: any) => ({{ value: String(opt.{lk_val}), label: String(opt.{lk_label}) }}))}}\n"
+                    f"              value={{form.{fname}}}\n"
+                    f'              onChange={{(v) => setForm(f => ({{...f, {fname}: v ?? ""}}))}}\n'
+                    f'              placeholder="Select {flabel}..."\n'
+                    f"            />\n"
                     f"          )}}\n"
                     f"        </div>"
                 )
@@ -106,11 +114,18 @@ def emit_form(page: dict, ctx: PageContext) -> None:
                     f"        </div>"
                 )
             elif ft == "date":
+                # Calendar-popover picker from ui-kit (Phase 0) — form state stays
+                # a plain YYYY-MM-DD string so the backend DTO contract doesn't
+                # change; we just swap the UI.
                 inputs.append(
                     f'        <div className="space-y-2">\n'
                     f'          <Label htmlFor="{fname}">{flabel}{req_star}</Label>\n'
-                    f'          <Input id="{fname}" type="date"\n'
-                    f"            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{'required ' if required else ''}/>\n"
+                    f"          <DatePicker\n"
+                    f'            id="{fname}"\n'
+                    f"            value={{form.{fname} ? new Date(form.{fname}) : undefined}}\n"
+                    f'            onChange={{(d) => setForm(f => ({{...f, {fname}: d ? d.toISOString().slice(0, 10) : ""}}))}}\n'
+                    f'            placeholder="Select {flabel}..."\n'
+                    f"          />\n"
                     f"        </div>"
                 )
             elif ft == "datetime":

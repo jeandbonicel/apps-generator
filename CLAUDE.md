@@ -144,13 +144,14 @@ Features: `docker` (on), `kubernetes` (on), `cicd` (on), `tailwind` (on).
 - `kanban` — drag-and-drop board grouped by a status enum. Columns are the enum's `values`; dropping a card PATCHes the record's status field with the new column value, with an optimistic local update so the UI never lags. Column resolution: explicit `statusField` > field named `status`/`state`/`stage`/`phase` > first enum field > single "Backlog" fallback. Uses [`@dnd-kit/core`](https://dndkit.com/) + `@dnd-kit/sortable` + `@dnd-kit/utilities` — one `SortableContext` per column, 4 px pointer-activation distance.
 - `calendar` — month / week / day calendar view via [`@schedule-x/react`](https://schedule-x.dev/). Fetches up to 1000 records and transforms them into schedule-x events. Date-field resolution: explicit `dateField` > field named `date`/`startDate`/`start`/`when` > first `date`/`datetime` field. Optional `endField` falls back to the next temporal field, or to the same field as start (single-cell event). Title = first string field (or `id`). `datetime` values are sliced to 16 chars and the ISO `T` separator is swapped for a space to match schedule-x's `YYYY-MM-DD HH:mm` format; `date` values are sliced to 10 chars. Records with null start are skipped. Graceful placeholder when the resource has no `date`/`datetime` field.
 
-**Smart form features:**
-- `enum` fields with `values` array → `<select>` dropdown with predefined options
-- `datetime` fields → `<input type="datetime-local">`
-- `date` fields → `<input type="date">`
-- `text` fields → `<textarea>`
-- `boolean` fields → checkbox
-- Resource lookups: when a field name matches `{resource}Name` or `{resource}Id` and that resource exists in the pages config, the form auto-generates a `<select>` dropdown populated from the API, with "Create one first" message when empty.
+**Smart form features** (used by `form` / `edit` / `settings`):
+
+- `date` fields → ui-kit **`DatePicker`** (Calendar-popover from Phase 0) when `--uikit` is linked; plain `<input type="date">` as fallback. Form state stays a `YYYY-MM-DD` string so the BE contract is unchanged; the emitter converts `string ↔ Date` at the component boundary.
+- `datetime` fields → `<input type="datetime-local">` (DatePicker has no time picker; keeping the native input until ui-kit grows one).
+- `enum` fields with `values` array → native `<select>` dropdown — enum value lists are short enough that a native picker stays usable.
+- `text` fields → `<textarea>`.
+- `boolean` fields → ui-kit `Checkbox` (with `--uikit`) or native checkbox.
+- **Resource lookups**: when a field name matches `{resource}Name` or `{resource}Id` and that resource exists in the pages config, the form auto-fetches and renders a ui-kit **`Combobox`** (typeahead, from Phase 0) when `--uikit` is linked — so the picker stays usable as the option list grows. Without ui-kit, falls back to a native `<select>`. Shows "Create one first" message when the referenced resource has no rows.
 
 When `--uikit` is linked, pages import shadcn components (Button, Input, Table, Card, etc.). Without ui-kit, falls back to plain HTML with matching Tailwind classes.
 

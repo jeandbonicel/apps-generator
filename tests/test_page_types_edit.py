@@ -160,8 +160,10 @@ def test_edit_renders_type_aware_inputs(tmp_path: Path) -> None:
     assert '<Checkbox id="active"' in tsx
     # Textarea for text
     assert '<Textarea id="notes"' in tsx
-    # Dedicated date / datetime-local inputs
-    assert '<Input id="hireDate" type="date"' in tsx
+    # Date fields now use the ui-kit DatePicker (Phase 0). Datetime stays
+    # as a native <Input type="datetime-local"> — DatePicker has no time picker.
+    assert "<DatePicker" in tsx
+    assert 'id="hireDate"' in tsx
     assert '<Input id="startTime" type="datetime-local"' in tsx
     # Number inputs for integer/decimal
     assert '<Input id="yearsExperience" type="number"' in tsx
@@ -191,6 +193,56 @@ def test_edit_handles_fetch_loading_and_error(tmp_path: Path) -> None:
     tsx = _generate_employee_edit(tmp_path)
     assert 't("loading")' in tsx
     assert 't("failedToLoad")' in tsx
+
+
+def test_edit_uses_datepicker_for_date_fields(tmp_path: Path) -> None:
+    """Date fields swap to ui-kit DatePicker — converts ISO string <-> Date.
+
+    The form state stays a YYYY-MM-DD string so the BE contract is
+    unchanged; only the input widget swaps.
+    """
+    tsx = _generate_employee_edit(tmp_path, uikit="my-ui")
+    assert "<DatePicker" in tsx
+    # ISO string -> Date on read
+    assert "form.hireDate ? new Date(form.hireDate) : undefined" in tsx
+    # Date -> ISO string on write
+    assert 'd ? d.toISOString().slice(0, 10) : ""' in tsx
+    # No stale native date input
+    assert '<Input id="hireDate" type="date"' not in tsx
+
+
+def test_edit_uses_combobox_for_lookup_fields(tmp_path: Path) -> None:
+    """Resource-lookup dropdowns swap to Combobox so they stay usable
+    when the option list gets long."""
+    # Second resource needed so `employeeName` auto-detects as a lookup
+    project_root = tmp_path / "app"
+    (project_root / "src" / "routes").mkdir(parents=True)
+    page = {
+        "path": "edit-leave",
+        "label": "Edit Leave",
+        "resource": "leave",
+        "type": "edit",
+        "fields": [
+            {"name": "employeeName", "type": "string"},
+            {"name": "startDate", "type": "date"},
+        ],
+    }
+    generate_page_components(
+        project_root=project_root,
+        pages=[page],
+        project_name="demo",
+        uikit_name="my-ui",
+        api_client_name="my-api",
+        all_resources=["leave", "employee"],
+    )
+    tsx = (project_root / "src" / "routes" / "EditLeavePage.tsx").read_text()
+    assert "<Combobox" in tsx
+    # Options built inline from the lookup query result
+    assert "employeeOptions.map((opt: any) => ({ value:" in tsx
+    # No stale native <select> for lookups
+    assert 'id="employeeName"' in tsx
+    # The surrounding <div> + Label wiring is intact
+    assert 'htmlFor="employeeName"' in tsx
 
 
 def test_edit_emits_valid_jsx_style_prop(tmp_path: Path) -> None:
