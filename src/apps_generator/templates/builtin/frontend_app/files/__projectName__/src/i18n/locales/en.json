@@ -18,5 +18,14 @@
   "createdSuccessfully": "Created successfully!",
   "yes": "Yes",
   "no": "No",
-  "missingId": "No ID provided"
+  "missingId": "No ID provided",
+  "save": "Save",
+  "saving": "Saving...",
+  "updatedSuccessfully": "Updated successfully!",
+  "delete": "Delete",
+  "deleting": "Deleting...",
+  "confirmDelete": "Are you sure?",
+  "confirmDeleteDesc": "This action cannot be undone.",
+  "confirm": "Confirm",
+  "cancel": "Cancel"
 }
