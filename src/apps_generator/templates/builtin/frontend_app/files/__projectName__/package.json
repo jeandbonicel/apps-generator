@@ -22,7 +22,8 @@
     "react-dom": "^18.3.1",
     "i18next": "^23.12.0",
     "react-i18next": "^15.0.0",
-    "@tanstack/react-query": "^5.51.0"
+    "@tanstack/react-query": "^5.51.0",
+    "react-arborist": "^3.4.0"
   },
   "devDependencies": {
     "@module-federation/vite": "^1.14.0",
