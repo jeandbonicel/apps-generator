@@ -132,6 +132,7 @@ Features: `docker` (on), `kubernetes` (on), `cicd` (on), `tailwind` (on).
 - `grid` — responsive card-grid (1 col mobile / 2 md / 3 lg) for a resource collection. Same paginated query as `list`. First string field becomes the CardTitle, second becomes CardDescription; remaining fields drop into the card body as label/value pairs. Enum and boolean values render as Badges for fast visual scanning. Null-safe, shows empty state spanning all grid columns.
 - `edit` — update form for an existing record. Reads `id` from `?id=` query string, fetches via `useQuery`, hydrates form state via `useEffect`, saves via PUT with `t("updatedSuccessfully")` feedback. Includes a destructive Delete button wrapped in an `AlertDialog` confirmation (Phase 0 component); plain-HTML fallback uses `window.confirm`. Same type-aware inputs and resource-lookup auto-detection as `form`.
 - `settings` — configuration form for a **singleton** resource. `GET /{resource}` returns one record, `PUT /{resource}` updates it — no `id` in the URL. Fields can be grouped via an optional `group` key and render as shadcn `Accordion` items (Phase 0), all expanded by default; ungrouped fields drop into a "General" section. Plain-HTML fallback uses bordered `<section>` headings instead of Accordion. No delete.
+- `tree` — hierarchical view for a resource with a nullable `parentId` field. Fetches up to 1000 records via `GET /{resource}`, builds a nested tree client-side (dangling children become roots if pagination cuts off an ancestor), renders with [`react-arborist`](https://github.com/brimdata/react-arborist) — collapsible, keyboard-navigable, virtualized. Node label = first string field (falls back to `id`). Clicking a leaf navigates to `./view?id={id}` (the detail-page convention). Requires `react-arborist` (auto-added to frontend-app `dependencies`).
 
 **Smart form features:**
 - `enum` fields with `values` array → `<select>` dropdown with predefined options
@@ -195,7 +196,8 @@ src/apps_generator/
 │       │   ├── detail_type.py
 │       │   ├── grid_type.py
 │       │   ├── edit_type.py
-│       │   └── settings_type.py
+│       │   ├── settings_type.py
+│       │   └── tree_type.py
 │       ├── resources.py      # Java CRUD scaffolding
 │       ├── types.py          # TypeScript type generation
 │       ├── migrations.py     # Liquibase migrations
@@ -241,7 +243,7 @@ All templates use the shadcn neutral theme (near-black primary, not blue):
 - Translation files: `src/i18n/locales/en.json` and `fr.json`
 - Shell syncs language to MFEs via `window.__SHELL_LANGUAGE__` + event
 - All UI strings use `t("key")` — no hardcoded English in components
-- Generated pages (list/form/dashboard/detail/grid/edit/settings) use `useTranslation()` for all UI text
+- Generated pages (list/form/dashboard/detail/grid/edit/settings/tree) use `useTranslation()` for all UI text
 - Translation keys: loading, noDataFound, previous, next, create, creating, createdSuccessfully, failedToLoad, etc.
 
 **Adding a new language:** Copy `en.json` to `<lang>.json`, translate values, add to `i18n/index.ts` resources.
