@@ -36,6 +36,7 @@ Each resource has a `name` (used for class names, table names, and URL paths) an
 | `date` | `LocalDate` | `DATE` | `string` | ISO 8601 date (e.g., `2025-01-15`) |
 | `datetime` | `LocalDateTime` | `TIMESTAMP` | `string` | ISO 8601 datetime (e.g., `2025-01-15T10:00:00`) |
 | `enum` | Java enum class | `VARCHAR` | union type | Predefined values. Use `"values": ["a", "b", "c"]`. Generates Java enum with `@Enumerated(EnumType.STRING)`, TypeScript union (`"a" \| "b" \| "c"`), and `<select>` dropdown in forms. |
+| `reference` | `Long` | `BIGINT` + FK | `number` | Foreign-key id pointing at another resource. Use `"target": "<resource>"`. Adds a Liquibase `addForeignKeyConstraint` to `{target}s(id)`; the `form` / `edit` pages auto-render a Combobox lookup against the target's list endpoint. Self-references are allowed — they power the `tree` page without needing a hand-rolled `parentId`. For cross-resource references, put the target resource earlier in the `resources` array so its table exists when the FK is applied. |
 
 ## Field Constraints
 
