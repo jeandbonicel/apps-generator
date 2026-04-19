@@ -144,9 +144,7 @@ def test_reference_field_emits_fk_constraint_in_migration(tmp_path: Path) -> Non
         ),
     )
     # Employee is the second resource (seq 003) in the resources array
-    changelog = yaml.safe_load(
-        (res_root / "db" / "changelog" / "changes" / "003-create-employee.yaml").read_text()
-    )
+    changelog = yaml.safe_load((res_root / "db" / "changelog" / "changes" / "003-create-employee.yaml").read_text())
     changes = changelog["databaseChangeLog"][0]["changeSet"]["changes"]
     fk_changes = [c for c in changes if "addForeignKeyConstraint" in c]
     assert len(fk_changes) == 1
@@ -173,9 +171,7 @@ def test_reference_field_column_is_bigint(tmp_path: Path) -> None:
             ]
         ),
     )
-    changelog = yaml.safe_load(
-        (res_root / "db" / "changelog" / "changes" / "003-create-employee.yaml").read_text()
-    )
+    changelog = yaml.safe_load((res_root / "db" / "changelog" / "changes" / "003-create-employee.yaml").read_text())
     columns = changelog["databaseChangeLog"][0]["changeSet"]["changes"][0]["createTable"]["columns"]
     dep_col = next(c["column"] for c in columns if c["column"]["name"] == "department_id")
     assert dep_col["type"] == "BIGINT"
@@ -197,9 +193,7 @@ def test_self_reference_fk_points_back_at_same_table(tmp_path: Path) -> None:
             ]
         ),
     )
-    changelog = yaml.safe_load(
-        (res_root / "db" / "changelog" / "changes" / "002-create-department.yaml").read_text()
-    )
+    changelog = yaml.safe_load((res_root / "db" / "changelog" / "changes" / "002-create-department.yaml").read_text())
     changes = changelog["databaseChangeLog"][0]["changeSet"]["changes"]
     fk_changes = [c for c in changes if "addForeignKeyConstraint" in c]
     assert len(fk_changes) == 1
@@ -237,14 +231,12 @@ def test_required_reference_is_skipped_for_validation_test(tmp_path: Path) -> No
             ]
         ),
     )
-    test = (
-        Path(str(java_root).replace("/main/java/", "/test/java/")) / "EmployeeIntegrationTest.java"
-    ).read_text()
+    test = (Path(str(java_root).replace("/main/java/", "/test/java/")) / "EmployeeIntegrationTest.java").read_text()
     # Validation test was generated — but drops ``name``, not ``departmentId``
     assert "withMissingRequiredField_returns400" in test
     # The missing-field JSON must still carry departmentId so the test isn't
     # also tripping the FK-not-null — just not ``name``.
-    assert 'name' not in test.split("withMissingRequiredField_returns400")[1].split("}")[0]
+    assert "name" not in test.split("withMissingRequiredField_returns400")[1].split("}")[0]
 
 
 # ── TypeScript types ────────────────────────────────────────────────────────
@@ -299,9 +291,7 @@ def test_detect_lookup_heuristic_still_skips_current_resource() -> None:
     field = {"name": "employeeName", "type": "string"}
     assert detect_lookup(field, ["employee"], current_resource="employee") is None
     # But when ``employee`` is a *different* resource, the match stands
-    assert (
-        detect_lookup(field, ["employee", "leave"], current_resource="leave") is not None
-    )
+    assert detect_lookup(field, ["employee", "leave"], current_resource="leave") is not None
 
 
 # ── Form / edit emitter wiring ──────────────────────────────────────────────

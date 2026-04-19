@@ -52,11 +52,7 @@ def emit_tree(page: dict, ctx: PageContext) -> None:
     # Resolve the parent field — explicit self-reference takes priority over
     # the legacy ``parentId`` convention.
     parent_field = next(
-        (
-            f
-            for f in fields
-            if f.get("type") == "reference" and f.get("target") == resource
-        ),
+        (f for f in fields if f.get("type") == "reference" and f.get("target") == resource),
         None,
     )
     if parent_field is None:

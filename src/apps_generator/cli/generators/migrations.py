@@ -98,15 +98,15 @@ def generate_migration(res_root: Path, entity: str, table: str, fields: list[dic
         if not target:
             continue
         target_table = snake_case(target) + "s"
-        col = snake_case(f["name"])
+        col_name = snake_case(f["name"])
         changeset["changes"].append(
             {
                 "addForeignKeyConstraint": {
                     "baseTableName": table,
-                    "baseColumnNames": col,
+                    "baseColumnNames": col_name,
                     "referencedTableName": target_table,
                     "referencedColumnNames": "id",
-                    "constraintName": f"fk_{table}_{col}",
+                    "constraintName": f"fk_{table}_{col_name}",
                 }
             }
         )
