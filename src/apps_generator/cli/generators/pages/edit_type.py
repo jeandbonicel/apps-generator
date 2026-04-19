@@ -49,6 +49,17 @@ def emit_edit(page: dict, ctx: PageContext) -> None:
 
     # ui-kit imports — edit needs Form primitives + AlertDialog for the
     # destructive confirm flow. AlertDialog is a Phase 0 addition.
+    # TagInput / MultiSelect join the import line only when the page has
+    # the matching array field type so unused components don't leak into
+    # the tree-shake output.
+    has_string_array = any(f.get("type") == "stringArray" for f in fields)
+    has_enum_array = any(f.get("type") == "enumArray" for f in fields)
+    array_extra = ""
+    if has_string_array:
+        array_extra += ", TagInput"
+    if has_enum_array:
+        array_extra += ", MultiSelect"
+
     if ui:
         ui_import = (
             f"import {{ Button, Input, Label, Textarea, Checkbox, "
@@ -56,7 +67,7 @@ def emit_edit(page: dict, ctx: PageContext) -> None:
             f"AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, "
             f"AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, "
             f"AlertDialogAction, AlertDialogCancel, "
-            f'DatePicker, Combobox }} from "{ui}";\n'
+            f'DatePicker, Combobox{array_extra} }} from "{ui}";\n'
         )
     else:
         ui_import = ""
@@ -68,6 +79,8 @@ def emit_edit(page: dict, ctx: PageContext) -> None:
         fname = camel_case(f["name"])
         if ft == "boolean":
             defaults[fname] = "false"
+        elif ft in ("stringArray", "enumArray"):
+            defaults[fname] = "[] as string[]"
         else:
             defaults[fname] = '""'
     state_init = ", ".join(f"{k}: {v}" for k, v in defaults.items())
@@ -75,7 +88,8 @@ def emit_edit(page: dict, ctx: PageContext) -> None:
     # State hydration — map each fetched field into the form. Numbers come
     # back as numbers from the API but the form state expects strings.
     # Reference fields are stringified for the same reason — the Combobox
-    # option values are strings.
+    # option values are strings. Array fields keep their ``[]`` fallback
+    # so the controlled TagInput/MultiSelect never sees ``undefined``.
     hydrate_lines: list[str] = []
     for f in fields:
         ft = f.get("type", "string")
@@ -87,6 +101,8 @@ def emit_edit(page: dict, ctx: PageContext) -> None:
         elif ft == "datetime":
             # HTML datetime-local wants YYYY-MM-DDTHH:mm (no TZ) — trim any zone.
             hydrate_lines.append(f'          {fname}: data.{fname} ? String(data.{fname}).slice(0, 16) : "",')
+        elif ft in ("stringArray", "enumArray"):
+            hydrate_lines.append(f"          {fname}: data.{fname} ?? [],")
         else:
             hydrate_lines.append(f'          {fname}: data.{fname} ?? "",')
     hydrate_str = "\n".join(hydrate_lines)
@@ -186,6 +202,32 @@ def emit_edit(page: dict, ctx: PageContext) -> None:
                     f"            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{'required ' if required else ''}/>\n"
                     f"        </div>"
                 )
+            elif ft == "stringArray":
+                inputs.append(
+                    f'        <div className="space-y-2">\n'
+                    f'          <Label htmlFor="{fname}">{flabel}{req_star}</Label>\n'
+                    f"          <TagInput\n"
+                    f'            id="{fname}"\n'
+                    f"            value={{form.{fname}}}\n"
+                    f"            onChange={{(v) => setForm(f => ({{...f, {fname}: v}}))}}\n"
+                    f'            placeholder="Add and press Enter..."\n'
+                    f"          />\n"
+                    f"        </div>"
+                )
+            elif ft == "enumArray" and f.get("values"):
+                ms_options = ", ".join(f'{{ value: "{v}", label: "{title_case(v)}" }}' for v in f["values"])
+                inputs.append(
+                    f'        <div className="space-y-2">\n'
+                    f'          <Label htmlFor="{fname}">{flabel}{req_star}</Label>\n'
+                    f"          <MultiSelect\n"
+                    f'            id="{fname}"\n'
+                    f"            options={{[{ms_options}]}}\n"
+                    f"            value={{form.{fname}}}\n"
+                    f"            onChange={{(v) => setForm(f => ({{...f, {fname}: v}}))}}\n"
+                    f'            placeholder="Select {flabel}..."\n'
+                    f"          />\n"
+                    f"        </div>"
+                )
             elif ft == "enum" and f.get("values"):
                 options = "".join(f'\n              <option value="{v}">{title_case(v)}</option>' for v in f["values"])
                 inputs.append(
@@ -242,6 +284,26 @@ def emit_edit(page: dict, ctx: PageContext) -> None:
                     f'          <label className="text-sm font-medium" htmlFor="{fname}">{flabel}</label>\n'
                     f"        </div>"
                 )
+            elif ft == "stringArray":
+                inputs.append(
+                    f"        <div>\n"
+                    f'          <label className="text-sm font-medium" htmlFor="{fname}">{flabel}{req_star} (comma-separated)</label>\n'
+                    f'          <input id="{fname}" type="text" className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"\n'
+                    f"            value={{form.{fname}.join(', ')}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean)}}))}}/>\n"
+                    f"        </div>"
+                )
+            elif ft == "enumArray" and f.get("values"):
+                multi_options = "".join(
+                    f'\n              <option value="{v}">{title_case(v)}</option>' for v in f["values"]
+                )
+                inputs.append(
+                    f"        <div>\n"
+                    f'          <label className="text-sm font-medium" htmlFor="{fname}">{flabel}{req_star}</label>\n'
+                    f'          <select multiple id="{fname}" className="mt-1 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-24"\n'
+                    f"            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: Array.from(e.target.selectedOptions, (o: HTMLOptionElement) => o.value)}}))}}>{multi_options}\n"
+                    f"          </select>\n"
+                    f"        </div>"
+                )
             elif ft == "enum" and f.get("values"):
                 options = "".join(f'\n              <option value="{v}">{title_case(v)}</option>' for v in f["values"])
                 inputs.append(
@@ -276,12 +338,15 @@ def emit_edit(page: dict, ctx: PageContext) -> None:
 
     # Body of the PUT — cast numeric fields back to numbers. Reference
     # fields are FK ids (backend ``Long``) so they share the Number cast.
+    # Arrays pass through as-is (``string[]`` on both sides of the wire).
     body_fields: list[str] = []
     for f in fields:
         ft = f.get("type", "string")
         fname = camel_case(f["name"])
         if ft in ("integer", "long", "decimal", "reference"):
             body_fields.append(f"        {fname}: form.{fname} ? Number(form.{fname}) : undefined,")
+        elif ft in ("stringArray", "enumArray"):
+            body_fields.append(f"        {fname}: form.{fname},")
         elif ft == "boolean":
             body_fields.append(f"        {fname}: form.{fname},")
         else:

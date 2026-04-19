@@ -22,6 +22,8 @@ JAVA_TYPES = {
     "datetime": "LocalDateTime",
     "enum": "__ENUM__",  # placeholder — replaced by generated enum class name
     "reference": "Long",  # FK id pointing at another resource's id column
+    "stringArray": "List<String>",
+    "enumArray": "List<__ENUM__>",  # element type resolved to the generated enum class
 }
 
 SQL_TYPES = {
@@ -35,6 +37,11 @@ SQL_TYPES = {
     "datetime": "TIMESTAMP",
     "enum": "VARCHAR({maxLength})",
     "reference": "BIGINT",
+    # Array types are stored in a join table, not a column on the parent table
+    # — the SQL_TYPES entry here isn't used by the column loop; the join-table
+    # migration synthesises its own ``VARCHAR(N)`` column for the element.
+    "stringArray": "VARCHAR(255)",
+    "enumArray": "VARCHAR(255)",
 }
 
 TS_TYPES = {
@@ -48,13 +55,22 @@ TS_TYPES = {
     "datetime": "string",
     "enum": "__ENUM__",  # placeholder — replaced by union type
     "reference": "number",
+    "stringArray": "string[]",
+    "enumArray": "__ENUM__",  # placeholder — replaced by `(union)[]`
 }
 
 JAVA_IMPORTS = {
     "decimal": "java.math.BigDecimal",
     "date": "java.time.LocalDate",
     "datetime": "java.time.LocalDateTime",
+    "stringArray": "java.util.List",
+    "enumArray": "java.util.List",
 }
+
+# Field types that map onto a ``@ElementCollection`` join table rather than
+# a plain column on the parent entity. Kept as a tuple so membership checks
+# stay O(1) and the emitter code reads cleanly.
+ARRAY_TYPES = ("stringArray", "enumArray")
 
 
 # -- Parsing ------------------------------------------------------------------
@@ -98,9 +114,11 @@ def generate_resource_scaffolding(
         label = f"{entity_name} (singleton)" if is_singleton else entity_name
         console.print(f"  Generating resource: [bold]{label}[/bold]")
 
-        # Generate enum classes first (needed by entity)
+        # Generate enum classes first (needed by entity). Both ``enum`` and
+        # ``enumArray`` use the same generated class; the only difference is
+        # that arrays wrap it in ``List<...>`` at the use site.
         for f in fields:
-            if f.get("type") == "enum" and f.get("values"):
+            if f.get("type") in ("enum", "enumArray") and f.get("values"):
                 _gen_enum_class(java_root, base_package, entity_name, f)
 
         _gen_entity(java_root, base_package, entity_name, table_name, fields)
@@ -124,27 +142,35 @@ def generate_resource_scaffolding(
             _gen_integration_test(test_root, base_package, entity_name, name, fields)
 
 
-def _collect_imports(fields: list[dict]) -> list[str]:
-    """Collect extra Java imports needed for field types (non-enum)."""
+def _collect_imports(fields: list[dict], *, include_array_init: bool = False) -> list[str]:
+    """Collect extra Java imports needed for field types (non-enum).
+
+    ``include_array_init=True`` additionally pulls in ``java.util.ArrayList``
+    for the entity's ``new ArrayList<>()`` initialiser. DTOs don't need it
+    because they don't initialise array fields.
+    """
     imports = set()
     for f in fields:
         ft = f.get("type", "string")
         if ft in JAVA_IMPORTS:
             imports.add(JAVA_IMPORTS[ft])
+    if include_array_init and any(f.get("type") in ARRAY_TYPES for f in fields):
+        imports.add("java.util.ArrayList")
     return sorted(imports)
 
 
 def _collect_enum_imports(pkg: str, fields: list[dict]) -> list[str]:
-    """Return fully-qualified imports for every enum field's generated class.
+    """Return fully-qualified imports for every enum / enumArray field's generated class.
 
     Enum classes live under ``{pkg}.domain.model`` (see :func:`_gen_enum_class`).
     DTOs under ``{pkg}.interfaces.rest.dto`` need explicit imports to resolve
-    them at compile time — without this, any resource with an enum field
-    produced DTOs that would not compile.
+    them at compile time — without this, any resource with an enum (or
+    ``enumArray``) field produced DTOs that would not compile.
     """
     imports: set[str] = set()
     for f in fields:
-        if f.get("type") == "enum" and f.get("values"):
+        ft = f.get("type")
+        if ft in ("enum", "enumArray") and f.get("values"):
             enum_name = pascal_case(f["name"])
             imports.add(f"{pkg}.domain.model.{enum_name}")
     return sorted(imports)
@@ -167,30 +193,69 @@ def _gen_enum_class(java_root: Path, pkg: str, entity: str, field: dict) -> str:
 
 
 def _java_type_for_field(f: dict) -> str:
-    """Get Java type for a field, handling enum specially."""
+    """Get Java type for a field, handling enum and array specials."""
     ft = f.get("type", "string")
     if ft == "enum":
         return pascal_case(f["name"])
+    if ft == "stringArray":
+        return "List<String>"
+    if ft == "enumArray":
+        # The element enum class is generated under ``{pkg}.domain.model`` via
+        # ``_gen_enum_class`` — its name derives from the field name, same
+        # convention as plain ``enum`` fields.
+        return f"List<{pascal_case(f['name'])}>"
     return JAVA_TYPES.get(ft, "String")
 
 
 def _ts_type_for_field(f: dict) -> str:
-    """Get TypeScript type for a field, handling enum specially."""
+    """Get TypeScript type for a field, handling enum and array specials."""
     ft = f.get("type", "string")
     if ft == "enum":
         values = f.get("values", [])
         if values:
             return " | ".join(f'"{v}"' for v in values)
         return "string"
+    if ft == "stringArray":
+        return "string[]"
+    if ft == "enumArray":
+        values = f.get("values", [])
+        if values:
+            # Parenthesise the union so the ``[]`` binds to the whole thing,
+            # not just the last member — ``"a" | "b"[]`` would be
+            # ``"a" | ("b"[])`` otherwise.
+            return "(" + " | ".join(f'"{v}"' for v in values) + ")[]"
+        return "string[]"
     return TS_TYPES.get(ft, "string")
 
 
-def _java_field(f: dict, with_validation: bool = False, with_required: bool = True) -> str:
+def _array_collection_table(entity: str, f: dict) -> str:
+    """Return the join-table name for a ``stringArray`` / ``enumArray`` field.
+
+    The name is ``{plural_table}_{field}`` where ``plural_table`` matches the
+    entity's main table name (``{snake}s``) and ``{field}`` is the snake-case
+    field name. This matches Hibernate's default but we spell it explicitly
+    so the Liquibase migration and the ``@CollectionTable`` annotation agree.
+    """
+    return f"{snake_case(entity)}s_{snake_case(f['name'])}"
+
+
+def _java_field(
+    f: dict,
+    with_validation: bool = False,
+    with_required: bool = True,
+    *,
+    entity: str | None = None,
+) -> str:
     """Generate a Java field declaration with optional validation annotations.
 
     ``with_required=False`` drops ``@NotBlank`` / ``@NotNull`` but keeps every
     other constraint (``@Size``, ``@Min``, ``@Max``, ``@Pattern``) — those only
     fire when the field is present, which is exactly what PATCH bodies need.
+
+    For ``stringArray`` / ``enumArray`` fields the entity-side rendering
+    (``with_validation=False``) switches to ``@ElementCollection`` +
+    ``@CollectionTable`` and a ``new ArrayList<>()`` initialiser; the DTO
+    side stays a plain ``List<...>`` declaration.
     """
     ft = f.get("type", "string")
     java_type = _java_type_for_field(f)
@@ -203,9 +268,12 @@ def _java_field(f: dict, with_validation: bool = False, with_required: bool = Tr
     max_val = f.get("max")
     pattern = f.get("pattern")
 
-    lines = []
+    lines: list[str] = []
 
     if with_validation:
+        # Arrays use ``@NotNull`` + ``@Size`` (a List is never "blank") — the
+        # conventional ``@NotEmpty`` would also work but @NotNull + required
+        # check keeps the annotation surface consistent with other types.
         if with_required and required and ft in ("string", "text"):
             lines.append("    @NotBlank")
         elif with_required and required:
@@ -224,24 +292,43 @@ def _java_field(f: dict, with_validation: bool = False, with_required: bool = Tr
         if pattern:
             lines.append(f'    @Pattern(regexp = "{pattern}")')
 
-    # Column annotation for entity
-    col_parts = []
-    if required and not with_validation:
-        col_parts.append("nullable = false")
-    if unique and not with_validation:
-        col_parts.append("unique = true")
-    if ft == "decimal" and not with_validation:
-        col_parts.append("precision = 19")
-        col_parts.append("scale = 4")
-    if max_len and not with_validation:
-        col_parts.append(f"length = {max_len}")
+    # Entity-only annotations (skipped when emitting DTO fields).
+    if not with_validation:
+        if ft in ARRAY_TYPES:
+            # ``@ElementCollection`` persists each list element as its own row
+            # in a child table; ``@CollectionTable`` pins the name + FK so the
+            # Liquibase migration and the Hibernate mapping don't drift apart.
+            table_name = _array_collection_table(entity or "", f)
+            join_col = f"{snake_case(entity or '')}_id"
+            value_col = snake_case(f["name"])
+            lines.append("    @ElementCollection(fetch = FetchType.EAGER)")
+            lines.append(f'    @CollectionTable(name = "{table_name}", joinColumns = @JoinColumn(name = "{join_col}"))')
+            lines.append(f'    @Column(name = "{value_col}")')
+            if ft == "enumArray":
+                lines.append("    @Enumerated(EnumType.STRING)")
+            # Default to an empty list so callers never hit a null collection
+            # when building an entity imperatively (e.g. in the controller's
+            # request→entity mapping).
+            lines.append(f"    private {java_type} {name} = new ArrayList<>();")
+            return "\n".join(lines)
 
-    if col_parts and not with_validation:
-        lines.append(f"    @Column({', '.join(col_parts)})")
+        # Column annotation for scalar entity fields
+        col_parts = []
+        if required:
+            col_parts.append("nullable = false")
+        if unique:
+            col_parts.append("unique = true")
+        if ft == "decimal":
+            col_parts.append("precision = 19")
+            col_parts.append("scale = 4")
+        if max_len:
+            col_parts.append(f"length = {max_len}")
+        if col_parts:
+            lines.append(f"    @Column({', '.join(col_parts)})")
 
-    # Enum annotation for entity
-    if ft == "enum" and not with_validation:
-        lines.append("    @Enumerated(EnumType.STRING)")
+        # Enum annotation for scalar entity fields
+        if ft == "enum":
+            lines.append("    @Enumerated(EnumType.STRING)")
 
     lines.append(f"    private {java_type} {name};")
     return "\n".join(lines)
@@ -253,12 +340,14 @@ def _gen_entity(java_root: Path, pkg: str, entity: str, table: str, fields: list
     if dest.exists():
         return
 
-    extra_imports = _collect_imports(fields)
+    # ``include_array_init=True`` pulls in ``java.util.ArrayList`` for the
+    # default ``= new ArrayList<>()`` initialiser on array fields.
+    extra_imports = _collect_imports(fields, include_array_init=True)
     import_lines = "\n".join(f"import {i};" for i in extra_imports)
     if import_lines:
         import_lines = "\n" + import_lines
 
-    field_lines = "\n\n".join(_java_field(f) for f in fields)
+    field_lines = "\n\n".join(_java_field(f, entity=entity) for f in fields)
 
     # Getters and setters (only for user-defined fields — id/tenantId/timestamps come from base)
     accessors = []
@@ -889,6 +978,16 @@ def _gen_integration_test(test_root: Path, pkg: str, entity: str, name: str, fie
             json_fields.append(f'\\"{fname}\\": \\"2025-01-15\\"')
         elif ft == "datetime":
             json_fields.append(f'\\"{fname}\\": \\"2025-01-15T10:00:00\\"')
+        elif ft == "stringArray":
+            # Empty list keeps @NotNull happy without inventing values; the
+            # test still exercises CRUD round-trip for the parent row.
+            json_fields.append(f'\\"{fname}\\": []')
+        elif ft == "enumArray":
+            values = f.get("values", [])
+            if values:
+                json_fields.append(f'\\"{fname}\\": [\\"{values[0]}\\"]')
+            else:
+                json_fields.append(f'\\"{fname}\\": []')
     json_body = "{ " + ", ".join(json_fields) + " }"
 
     # Find a required string field for update test

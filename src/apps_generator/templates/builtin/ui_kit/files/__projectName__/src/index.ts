@@ -67,6 +67,8 @@ export { Calendar, type CalendarProps } from "./components/ui/calendar";
 export { DatePicker, type DatePickerProps } from "./components/ui/date-picker";
 export { RadioGroup, RadioGroupItem } from "./components/ui/radio-group";
 export { Combobox, type ComboboxProps, type ComboboxOption } from "./components/ui/combobox";
+export { MultiSelect, type MultiSelectProps, type MultiSelectOption } from "./components/ui/multi-select";
+export { TagInput, type TagInputProps } from "./components/ui/tag-input";
 export {
   Form, FormField, FormItem, FormLabel, FormControl,
   FormDescription, FormMessage, useFormField,
