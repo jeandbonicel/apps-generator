@@ -129,6 +129,8 @@ Generates a component with:
 - Loading and error states
 - Type-aware cell rendering (decimals formatted with `.toFixed(2)`, booleans as Yes/No)
 
+Optional `"rowLink": "<sub-path>"` on the page config makes each row clickable and pushes `<sub-path>?id={row.id}` through the MFE router (also supported on `grid`). Absent → rows stay inert, unchanged legacy behaviour.
+
 **Form page** (`type: "form"`):
 
 ```json

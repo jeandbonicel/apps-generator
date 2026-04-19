@@ -41,12 +41,12 @@ appgen generate frontend-app -o ./products -s projectName=products -s devPort=50
       {"name":"price","type":"decimal","required":true},
       {"name":"active","type":"boolean"}
     ]},
-    {"path":"list","label":"Products","resource":"product","type":"list","fields":[
+    {"path":"list","label":"Products","resource":"product","type":"list","rowLink":"view","fields":[
       {"name":"name","type":"string","required":true},
       {"name":"price","type":"decimal","required":true},
       {"name":"active","type":"boolean"}
     ]},
-    {"path":"catalog","label":"Catalog","resource":"product","type":"grid","fields":[
+    {"path":"catalog","label":"Catalog","resource":"product","type":"grid","rowLink":"view","fields":[
       {"name":"name","type":"string"},
       {"name":"description","type":"string"},
       {"name":"price","type":"decimal"},

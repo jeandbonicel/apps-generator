@@ -53,6 +53,22 @@ def detect_lookup(
     return None
 
 
+def normalize_row_link(raw: str | None) -> str | None:
+    """Coerce a page-config ``rowLink`` value into a leading-slash sub-path.
+
+    The MFE router's ``navigateTo`` takes a path rooted at the MFE's base
+    path; ``/detail`` and ``detail`` both resolve to the same place, but
+    normalising here keeps the emitted JSX consistent across page types.
+    Returns ``None`` when the caller didn't opt in.
+    """
+    if not raw or not isinstance(raw, str):
+        return None
+    raw = raw.strip()
+    if not raw:
+        return None
+    return raw if raw.startswith("/") else "/" + raw
+
+
 def page_target(page: dict, ctx: PageContext) -> tuple[Path, str, str]:
     """Return ``(dest, component_name, label)`` for a page config.
 

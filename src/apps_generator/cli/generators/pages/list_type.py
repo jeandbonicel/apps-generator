@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from apps_generator.utils.naming import camel_case, pascal_case, title_case
 
-from .base import page_target
+from .base import normalize_row_link, page_target
 from .registry import PageContext, PageTypeInfo, get_registry
 
 
@@ -16,6 +16,7 @@ def emit_list(page: dict, ctx: PageContext) -> None:
     entity = pascal_case(resource)
     _api_pkg = ctx.api_client_name or "my-api-client"
     ui = ctx.uikit_name
+    row_link = normalize_row_link(page.get("rowLink"))
 
     # ui-kit imports
     if ui:
@@ -63,11 +64,18 @@ def emit_list(page: dict, ctx: PageContext) -> None:
         else '<button className="px-3 py-1 border rounded text-sm disabled:opacity-50" onClick={() => setPage(p => p + 1)} disabled={page >= totalPages - 1}>{t("next")}</button>'
     )
 
+    # Row-click navigation — opt-in via page.rowLink. When present, each row
+    # gets a click handler that pushes ``{rowLink}?id={p.id}`` through the
+    # MFE router; absent keeps rows inert (unchanged legacy behaviour).
+    row_click_attrs = f" onClick={{() => navigateTo(`{row_link}?id=${{p.id}}`)}}" if row_link else ""
+    row_click_class = " cursor-pointer hover:bg-accent transition-colors" if row_link else ""
+
     # Table wrapper
     if ui:
         table_open = f"      <Card>\n        <CardHeader>\n          <CardTitle>{label} ({{data?.totalElements ?? 0}})</CardTitle>\n        </CardHeader>\n        <CardContent>\n          <Table>\n            <TableHeader>\n              <TableRow>"
         table_head_close = "              </TableRow>\n            </TableHeader>\n            <TableBody>"
-        row_open = "              <TableRow key={p.id}>"
+        row_class_attr = f' className="{row_click_class.strip()}"' if row_click_class else ""
+        row_open = f"              <TableRow key={{p.id}}{row_class_attr}{row_click_attrs}>"
         row_close = "              </TableRow>"
         empty_row = f'              <TableRow><TableCell colSpan={{{len(fields)}}} className="text-center text-muted-foreground py-8">{{t("noDataFound")}}</TableCell></TableRow>'
         table_close = "            </TableBody>\n          </Table>\n        </CardContent>\n      </Card>"
@@ -76,10 +84,14 @@ def emit_list(page: dict, ctx: PageContext) -> None:
             '      <table className="w-full border-collapse">\n        <thead>\n          <tr className="border-b">'
         )
         table_head_close = "          </tr>\n        </thead>\n        <tbody>"
-        row_open = '            <tr key={p.id} className="border-b">'
+        row_open = f'            <tr key={{p.id}} className="border-b{row_click_class}"{row_click_attrs}>'
         row_close = "            </tr>"
         empty_row = f'            <tr><td colSpan={{{len(fields)}}} className="p-4 text-center text-muted-foreground">{{t("noDataFound")}}</td></tr>'
         table_close = "        </tbody>\n      </table>"
+
+    # navigateTo is the MFE router's ``pushState + event`` helper; only pulled
+    # in when rowLink is set so pages without navigation stay lean.
+    nav_import = 'import { navigateTo } from "../router";\n' if row_link else ""
 
     dest.write_text(
         f'import {{ useState }} from "react";\n'
@@ -87,6 +99,7 @@ def emit_list(page: dict, ctx: PageContext) -> None:
         f'import {{ useQuery }} from "@tanstack/react-query";\n'
         f'import {{ useApiClient }} from "{_api_pkg}/react";\n'
         f'import type {{ {entity}, PageResponse }} from "{_api_pkg}";\n'
+        f"{nav_import}"
         f"{ui_import}"
         f"\n"
         f"export function {component}() {{\n"

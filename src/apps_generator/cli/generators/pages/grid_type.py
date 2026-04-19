@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from apps_generator.utils.naming import camel_case, pascal_case, title_case
 
-from .base import page_target
+from .base import normalize_row_link, page_target
 from .registry import PageContext, PageTypeInfo, get_registry
 
 
@@ -73,6 +73,13 @@ def emit_grid(page: dict, ctx: PageContext) -> None:
     entity = pascal_case(resource)
     _api_pkg = ctx.api_client_name or "my-api-client"
     ui = ctx.uikit_name
+    row_link = normalize_row_link(page.get("rowLink"))
+
+    # Same ``rowLink`` semantics as ``list_type``: opt-in click-through to
+    # ``{rowLink}?id={card.id}`` via the MFE router. Cards get a hover state
+    # and a pointer cursor so they read as affordances.
+    click_attrs = f" onClick={{() => navigateTo(`{row_link}?id=${{p.id}}`)}}" if row_link else ""
+    click_class = " cursor-pointer hover:shadow-md transition-shadow" if row_link else ""
 
     title_field, description_field, body_fields = _pick_title_and_description(fields)
 
@@ -119,8 +126,9 @@ def emit_grid(page: dict, ctx: PageContext) -> None:
     body_rows_str = "\n".join(body_rows)
 
     if ui:
+        card_class_attr = f' className="{click_class.strip()}"' if click_class else ""
         card_block = (
-            f"            <Card key={{p.id}}>\n"
+            f"            <Card key={{p.id}}{card_class_attr}{click_attrs}>\n"
             f"              <CardHeader>\n"
             f"                <CardTitle>{title_expr}</CardTitle>\n"
             f"{description_jsx}"
@@ -148,8 +156,10 @@ def emit_grid(page: dict, ctx: PageContext) -> None:
             'disabled={page >= totalPages - 1}>{t("next")}</Button>'
         )
     else:
+        # Plain fallback — click attrs merge into the existing div's class list.
+        div_classes = "rounded-lg border bg-card p-4 space-y-2" + click_class
         card_block = (
-            f'            <div key={{p.id}} className="rounded-lg border bg-card p-4 space-y-2">\n'
+            f'            <div key={{p.id}} className="{div_classes}"{click_attrs}>\n'
             f'              <h3 className="text-lg font-semibold">{title_expr}</h3>\n'
             f"{description_jsx}"
             + (
@@ -171,12 +181,17 @@ def emit_grid(page: dict, ctx: PageContext) -> None:
             'onClick={() => setPage(p => p + 1)} disabled={page >= totalPages - 1}>{t("next")}</button>'
         )
 
+    # navigateTo comes from the MFE router; only pull it in when rowLink is set
+    # so grids without navigation keep their existing import list unchanged.
+    nav_import = 'import { navigateTo } from "../router";\n' if row_link else ""
+
     dest.write_text(
         f'import {{ useState }} from "react";\n'
         f'import {{ useTranslation }} from "react-i18next";\n'
         f'import {{ useQuery }} from "@tanstack/react-query";\n'
         f'import {{ useApiClient }} from "{_api_pkg}/react";\n'
         f'import type {{ {entity}, PageResponse }} from "{_api_pkg}";\n'
+        f"{nav_import}"
         f"{ui_import}"
         f"\n"
         f"export function {component}() {{\n"
