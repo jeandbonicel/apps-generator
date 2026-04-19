@@ -30,7 +30,7 @@ appgen generate api-domain -o ./product-service \
   -s projectName=product-service \
   -s groupId=com.example \
   -s basePackage=com.example.products \
-  -s 'resources=[{"name":"product","fields":[{"name":"name","type":"string","required":true,"maxLength":255},{"name":"price","type":"decimal","required":true,"min":0},{"name":"status","type":"enum","required":true,"values":["active","inactive","archived"]},{"name":"active","type":"boolean"}]}]' \
+  -s 'resources=[{"name":"category","fields":[{"name":"name","type":"string","required":true}]},{"name":"product","fields":[{"name":"name","type":"string","required":true,"maxLength":255},{"name":"price","type":"decimal","required":true,"min":0},{"name":"status","type":"enum","required":true,"values":["active","inactive","archived"]},{"name":"categoryId","type":"reference","target":"category"},{"name":"active","type":"boolean"}]}]' \
   --gateway ./gateway --api-client ./api-client
 
 # 6. Micro-frontend with data-aware pages (dashboard + list + grid + form + detail + edit)
