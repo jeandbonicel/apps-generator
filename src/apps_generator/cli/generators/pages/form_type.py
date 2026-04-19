@@ -31,17 +31,29 @@ def emit_form(page: dict, ctx: PageContext) -> None:
     _api_pkg = ctx.api_client_name or "my-api-client"
     ui = ctx.uikit_name
 
-    # ui-kit imports
+    # ui-kit imports — MultiSelect/TagInput are pulled in only when the form
+    # has a matching array field, but keeping them on the main import line
+    # keeps the emitted JSX readable without conditional branching.
+    has_string_array = any(f.get("type") == "stringArray" for f in fields)
+    has_enum_array = any(f.get("type") == "enumArray" for f in fields)
+    array_extra = ""
+    if has_string_array:
+        array_extra += ", TagInput"
+    if has_enum_array:
+        array_extra += ", MultiSelect"
+
     if ui:
         ui_import = (
             f"import {{ Button, Input, Label, Textarea, Checkbox, "
             f"Card, CardContent, CardHeader, CardTitle, Alert, AlertDescription, "
-            f'DatePicker, Combobox }} from "{ui}";\n'
+            f'DatePicker, Combobox{array_extra} }} from "{ui}";\n'
         )
     else:
         ui_import = ""
 
-    # Build form state defaults
+    # Build form state defaults. Arrays default to ``[]`` so the TagInput /
+    # MultiSelect values never go through the ``undefined`` → uncontrolled
+    # → controlled React warning path.
     defaults = {}
     for f in fields:
         ft = f.get("type", "string")
@@ -50,6 +62,8 @@ def emit_form(page: dict, ctx: PageContext) -> None:
             defaults[fname] = '""'
         elif ft == "boolean":
             defaults[fname] = "false"
+        elif ft in ("stringArray", "enumArray"):
+            defaults[fname] = "[] as string[]"
         else:
             defaults[fname] = '""'
 
@@ -155,6 +169,34 @@ def emit_form(page: dict, ctx: PageContext) -> None:
                     f"            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value}}))}}{'required ' if required else ''}/>\n"
                     f"        </div>"
                 )
+            elif ft == "stringArray":
+                # Free-form chip input — any string the user types becomes a tag.
+                inputs.append(
+                    f'        <div className="space-y-2">\n'
+                    f'          <Label htmlFor="{fname}">{flabel}{req_star}</Label>\n'
+                    f"          <TagInput\n"
+                    f'            id="{fname}"\n'
+                    f"            value={{form.{fname}}}\n"
+                    f"            onChange={{(v) => setForm(f => ({{...f, {fname}: v}}))}}\n"
+                    f'            placeholder="Add and press Enter..."\n'
+                    f"          />\n"
+                    f"        </div>"
+                )
+            elif ft == "enumArray" and f.get("values"):
+                # Fixed option set — MultiSelect (Command + Popover + Badge).
+                ms_options = ", ".join(f'{{ value: "{v}", label: "{title_case(v)}" }}' for v in f["values"])
+                inputs.append(
+                    f'        <div className="space-y-2">\n'
+                    f'          <Label htmlFor="{fname}">{flabel}{req_star}</Label>\n'
+                    f"          <MultiSelect\n"
+                    f'            id="{fname}"\n'
+                    f"            options={{[{ms_options}]}}\n"
+                    f"            value={{form.{fname}}}\n"
+                    f"            onChange={{(v) => setForm(f => ({{...f, {fname}: v}}))}}\n"
+                    f'            placeholder="Select {flabel}..."\n'
+                    f"          />\n"
+                    f"        </div>"
+                )
             elif ft == "enum" and f.get("values"):
                 options = "".join(f'\n              <option value="{v}">{title_case(v)}</option>' for v in f["values"])
                 inputs.append(
@@ -211,6 +253,28 @@ def emit_form(page: dict, ctx: PageContext) -> None:
                     f'          <label className="text-sm font-medium" htmlFor="{fname}">{flabel}</label>\n'
                     f"        </div>"
                 )
+            elif ft == "stringArray":
+                # Plain-HTML fallback — no chip widget; a comma-separated
+                # ``<input>`` gets the user across the finish line.
+                inputs.append(
+                    f"        <div>\n"
+                    f'          <label className="text-sm font-medium" htmlFor="{fname}">{flabel}{req_star} (comma-separated)</label>\n'
+                    f'          <input id="{fname}" type="text" className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"\n'
+                    f"            value={{form.{fname}.join(', ')}} onChange={{e => setForm(f => ({{...f, {fname}: e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean)}}))}}/>\n"
+                    f"        </div>"
+                )
+            elif ft == "enumArray" and f.get("values"):
+                multi_options = "".join(
+                    f'\n              <option value="{v}">{title_case(v)}</option>' for v in f["values"]
+                )
+                inputs.append(
+                    f"        <div>\n"
+                    f'          <label className="text-sm font-medium" htmlFor="{fname}">{flabel}{req_star}</label>\n'
+                    f'          <select multiple id="{fname}" className="mt-1 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-24"\n'
+                    f"            value={{form.{fname}}} onChange={{e => setForm(f => ({{...f, {fname}: Array.from(e.target.selectedOptions, (o: HTMLOptionElement) => o.value)}}))}}>{multi_options}\n"
+                    f"          </select>\n"
+                    f"        </div>"
+                )
             elif ft == "enum" and f.get("values"):
                 options = "".join(f'\n              <option value="{v}">{title_case(v)}</option>' for v in f["values"])
                 inputs.append(
@@ -245,13 +309,16 @@ def emit_form(page: dict, ctx: PageContext) -> None:
 
     # Build submission body (cast number fields). Reference fields are FK ids
     # stored as ``Long`` on the backend, so they need the same Number cast as
-    # any other numeric type.
+    # any other numeric type. Arrays pass through as-is — they're already
+    # a ``string[]`` in form state and the BE expects a JSON array.
     body_fields = []
     for f in fields:
         ft = f.get("type", "string")
         fname = camel_case(f["name"])
         if ft in ("integer", "long", "decimal", "reference"):
             body_fields.append(f"        {fname}: form.{fname} ? Number(form.{fname}) : undefined,")
+        elif ft in ("stringArray", "enumArray"):
+            body_fields.append(f"        {fname}: form.{fname},")
         elif ft == "boolean":
             body_fields.append(f"        {fname}: form.{fname},")
         else:

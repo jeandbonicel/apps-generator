@@ -90,11 +90,13 @@ Features: `database` (on), `oauth2` (on), `docker` (on), `kubernetes` (on), `cic
 }]
 ```
 
-**Field types:** string, text, integer, long, decimal, boolean, date, datetime, enum, **reference**.
+**Field types:** string, text, integer, long, decimal, boolean, date, datetime, enum, **reference**, **stringArray**, **enumArray**.
 
 **Enum fields** use a `values` array: `{"name": "status", "type": "enum", "values": ["active", "inactive"]}`. Generates Java enum class, `@Enumerated(EnumType.STRING)` on entity, TypeScript union type (`"active" | "inactive"`), and `<select>` dropdown in forms.
 
 **Reference fields** use a `target` pointing at another resource: `{"name": "departmentId", "type": "reference", "target": "department"}`. Generates a `Long` FK column on the entity (no `@ManyToOne` navigation — DTOs stay flat), a Liquibase `addForeignKeyConstraint` pointing at `{target}s(id)`, and a TypeScript `number` in the Create/Update/Response DTOs. Self-references are allowed (e.g. `department.parentId → department`) and power the `tree` page without the caller having to add `parentId` by hand. The `form` / `edit` pages auto-render a `reference` as a **Combobox** lookup against the target's list endpoint. Cross-resource references require the target resource to appear earlier in the `resources` array so its table exists when the FK is applied.
+
+**Array fields** — `stringArray` (free-form tag list) and `enumArray` (fixed option set): stored in a per-field `@ElementCollection` join table named `{parent_table}_{field}` with a CASCADE FK back to the parent. Entity uses `List<String>` / `List<EnumName>` with a `new ArrayList<>()` initializer so callers never hit a null collection. DTOs round-trip as plain `List<...>`; TypeScript types are `string[]` / `(union)[]`. The `form` / `edit` pages render **`TagInput`** for `stringArray` (chip-style Enter-to-add) and **`MultiSelect`** for `enumArray` (typeahead with selected chips) when `--uikit` is linked; plain-HTML falls back to a comma-separated `<input>` for `stringArray` and a `<select multiple>` for `enumArray`.
 
 **Constraints:** required, unique, maxLength, minLength, min, max, pattern.
 
@@ -248,6 +250,8 @@ src/apps_generator/
 | datetime | LocalDateTime | TIMESTAMP | string |
 | enum | Java enum class | VARCHAR | union type (e.g. `"a" \| "b"`) |
 | reference | Long | BIGINT + FK | number |
+| stringArray | `List<String>` | join table + FK | `string[]` |
+| enumArray | `List<EnumName>` | join table + FK | `(union)[]` |
 
 ## CSS theme
 

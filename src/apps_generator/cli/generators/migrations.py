@@ -9,7 +9,7 @@ import yaml
 from apps_generator.utils.console import console
 from apps_generator.utils.naming import snake_case
 
-from apps_generator.cli.generators.resources import SQL_TYPES
+from apps_generator.cli.generators.resources import ARRAY_TYPES, SQL_TYPES
 
 
 def generate_migration(res_root: Path, entity: str, table: str, fields: list[dict], seq: int, name: str) -> None:
@@ -28,6 +28,10 @@ def generate_migration(res_root: Path, entity: str, table: str, fields: list[dic
 
     for f in fields:
         ft = f.get("type", "string")
+        # Array fields don't get a column on the parent table — their values
+        # live in a separate join table emitted below via @ElementCollection.
+        if ft in ARRAY_TYPES:
+            continue
         sql_type = SQL_TYPES.get(ft, "VARCHAR(255)")
         if ft == "string":
             max_len = f.get("maxLength", 255)
@@ -107,6 +111,69 @@ def generate_migration(res_root: Path, entity: str, table: str, fields: list[dic
                     "referencedTableName": target_table,
                     "referencedColumnNames": "id",
                     "constraintName": f"fk_{table}_{col_name}",
+                }
+            }
+        )
+
+    # Join tables for @ElementCollection array fields. One table per array:
+    # ``{parent_table}_{field}`` holding one row per list element, with a FK
+    # back to the parent. Hibernate ties the schema to the annotation via
+    # ``@CollectionTable(name=..., joinColumns=...)`` — the names here must
+    # match the entity's annotation exactly or Liquibase schema validation
+    # fails at startup.
+    parent_snake = snake_case(entity)
+    join_col = f"{parent_snake}_id"
+    for f in fields:
+        if f.get("type") not in ARRAY_TYPES:
+            continue
+        field_snake = snake_case(f["name"])
+        join_table = f"{table}_{field_snake}"
+        if f.get("type") == "enumArray":
+            element_len = max((len(v) for v in f.get("values", [""])), default=50)
+            element_type = f"VARCHAR({element_len})"
+        else:
+            element_type = f"VARCHAR({f.get('maxLength', 255)})"
+        changeset["changes"].append(
+            {
+                "createTable": {
+                    "tableName": join_table,
+                    "columns": [
+                        {
+                            "column": {
+                                "name": join_col,
+                                "type": "BIGINT",
+                                "constraints": {"nullable": False},
+                            }
+                        },
+                        {
+                            "column": {
+                                "name": field_snake,
+                                "type": element_type,
+                                "constraints": {"nullable": False},
+                            }
+                        },
+                    ],
+                }
+            }
+        )
+        changeset["changes"].append(
+            {
+                "addForeignKeyConstraint": {
+                    "baseTableName": join_table,
+                    "baseColumnNames": join_col,
+                    "referencedTableName": table,
+                    "referencedColumnNames": "id",
+                    "constraintName": f"fk_{join_table}_{join_col}",
+                    "onDelete": "CASCADE",
+                }
+            }
+        )
+        changeset["changes"].append(
+            {
+                "createIndex": {
+                    "tableName": join_table,
+                    "indexName": f"idx_{join_table}_{join_col}",
+                    "columns": [{"column": {"name": join_col}}],
                 }
             }
         )

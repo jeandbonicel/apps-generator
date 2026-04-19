@@ -37,6 +37,8 @@ Each resource has a `name` (used for class names, table names, and URL paths) an
 | `datetime` | `LocalDateTime` | `TIMESTAMP` | `string` | ISO 8601 datetime (e.g., `2025-01-15T10:00:00`) |
 | `enum` | Java enum class | `VARCHAR` | union type | Predefined values. Use `"values": ["a", "b", "c"]`. Generates Java enum with `@Enumerated(EnumType.STRING)`, TypeScript union (`"a" \| "b" \| "c"`), and `<select>` dropdown in forms. |
 | `reference` | `Long` | `BIGINT` + FK | `number` | Foreign-key id pointing at another resource. Use `"target": "<resource>"`. Adds a Liquibase `addForeignKeyConstraint` to `{target}s(id)`; the `form` / `edit` pages auto-render a Combobox lookup against the target's list endpoint. Self-references are allowed — they power the `tree` page without needing a hand-rolled `parentId`. For cross-resource references, put the target resource earlier in the `resources` array so its table exists when the FK is applied. |
+| `stringArray` | `List<String>` | join table + FK | `string[]` | Free-form tag list. Stored via `@ElementCollection` in a `{table}_{field}` join table with a CASCADE FK back to the parent. Forms render a **TagInput** (with `--uikit`) or a comma-separated `<input>` (fallback). |
+| `enumArray` | `List<EnumName>` | join table + FK | `(union)[]` | Multi-select over a fixed option set. Use `"values": ["a", "b"]`. Same join-table shape as `stringArray`; entity field uses `@Enumerated(EnumType.STRING)` per element. Forms render a **MultiSelect** typeahead (with `--uikit`) or a native `<select multiple>` (fallback). |
 
 ## Field Constraints
 
