@@ -32,12 +32,14 @@ def emit_edit(page: dict, ctx: PageContext) -> None:
     fields = page.get("fields", [])
 
     # Auto-detect lookups (same convention as form_type, mutating fields in
-    # place to preserve the existing contract).
+    # place to preserve the existing contract). Self-references (e.g. an
+    # ``employee.managerId`` pointing back at ``employee``) are preserved by
+    # passing the unfiltered resource list and letting ``detect_lookup``
+    # handle self-match policy per-branch.
     if ctx.all_resources:
-        other_resources = [r for r in ctx.all_resources if r != resource]
         for f in fields:
             if "lookup" not in f:
-                detected = detect_lookup(f, other_resources)
+                detected = detect_lookup(f, ctx.all_resources, current_resource=resource)
                 if detected:
                     f["lookup"] = detected
 
@@ -72,13 +74,15 @@ def emit_edit(page: dict, ctx: PageContext) -> None:
 
     # State hydration — map each fetched field into the form. Numbers come
     # back as numbers from the API but the form state expects strings.
+    # Reference fields are stringified for the same reason — the Combobox
+    # option values are strings.
     hydrate_lines: list[str] = []
     for f in fields:
         ft = f.get("type", "string")
         fname = camel_case(f["name"])
         if ft == "boolean":
             hydrate_lines.append(f"          {fname}: data.{fname} ?? false,")
-        elif ft in ("integer", "long", "decimal"):
+        elif ft in ("integer", "long", "decimal", "reference"):
             hydrate_lines.append(f'          {fname}: data.{fname} != null ? String(data.{fname}) : "",')
         elif ft == "datetime":
             # HTML datetime-local wants YYYY-MM-DDTHH:mm (no TZ) — trim any zone.
@@ -270,12 +274,13 @@ def emit_edit(page: dict, ctx: PageContext) -> None:
 
     inputs_str = "\n".join(inputs)
 
-    # Body of the PUT — cast numeric fields back to numbers.
+    # Body of the PUT — cast numeric fields back to numbers. Reference
+    # fields are FK ids (backend ``Long``) so they share the Number cast.
     body_fields: list[str] = []
     for f in fields:
         ft = f.get("type", "string")
         fname = camel_case(f["name"])
-        if ft in ("integer", "long", "decimal"):
+        if ft in ("integer", "long", "decimal", "reference"):
             body_fields.append(f"        {fname}: form.{fname} ? Number(form.{fname}) : undefined,")
         elif ft == "boolean":
             body_fields.append(f"        {fname}: form.{fname},")

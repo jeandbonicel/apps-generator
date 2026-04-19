@@ -1,16 +1,23 @@
 """``tree`` page type — hierarchical view of a self-referencing resource.
 
 Fetches a flat paginated list from the resource's collection endpoint,
-builds a tree from records whose ``parentId`` points to another record of
-the same resource, and renders it with `react-arborist`_. Nodes are
+builds a tree from records whose parent field points to another record
+of the same resource, and renders it with `react-arborist`_. Nodes are
 collapsible, keyboard-navigable, and virtualized — suitable for
 department hierarchies, folder structures, org charts, category trees.
 
 The resource must expose:
 
 * ``id`` — unique identifier (always present via ``TenantAwareEntity``)
-* ``parentId`` — nullable reference to another record of the same resource.
-  Records with ``parentId == null`` are roots.
+* a *parent field* — nullable reference to another record of the same
+  resource. Records where that field is ``null`` are roots.
+
+**Parent-field resolution**, in order:
+
+1. The first ``type: "reference"`` field whose ``target`` equals the
+   page's own resource — the first-class form (unblocked by PR C).
+2. A field literally named ``parentId`` / ``parent_id`` — legacy
+   convention, still honoured so older configs keep working.
 
 Clicking a node navigates to ``./view?id={id}`` by convention, so that a
 co-located ``detail`` page of the same resource opens that record. The
@@ -41,6 +48,23 @@ def emit_tree(page: dict, ctx: PageContext) -> None:
     # when no string field is configured.
     label_field = next((f for f in fields if f.get("type", "string") == "string"), None)
     label_fname = camel_case(label_field["name"]) if label_field else "id"
+
+    # Resolve the parent field — explicit self-reference takes priority over
+    # the legacy ``parentId`` convention.
+    parent_field = next(
+        (
+            f
+            for f in fields
+            if f.get("type") == "reference" and f.get("target") == resource
+        ),
+        None,
+    )
+    if parent_field is None:
+        parent_field = next(
+            (f for f in fields if f["name"] in ("parentId", "parent_id")),
+            None,
+        )
+    parent_fname = camel_case(parent_field["name"]) if parent_field else "parentId"
 
     # ui-kit imports — Tree pages lean on Card for the outer chrome; the
     # tree itself is react-arborist regardless of --uikit.
@@ -108,9 +132,10 @@ def emit_tree(page: dict, ctx: PageContext) -> None:
         f"}}\n"
         f"\n"
         f"/**\n"
-        f" * Build a nested tree from a flat list of records using ``parentId``.\n"
-        f" * Records whose parent isn't in the list are treated as roots so the\n"
-        f" * view degrades gracefully if pagination cuts off an ancestor.\n"
+        f" * Build a nested tree from a flat list of records using the parent\n"
+        f" * field resolved at generation time. Records whose parent isn't in\n"
+        f" * the list are treated as roots so the view degrades gracefully if\n"
+        f" * pagination cuts off an ancestor.\n"
         f" */\n"
         f"function buildTree(items: {entity}[]): TreeNode[] {{\n"
         f"  const byId = new Map<string, TreeNode>();\n"
@@ -124,8 +149,9 @@ def emit_tree(page: dict, ctx: PageContext) -> None:
         f"  const roots: TreeNode[] = [];\n"
         f"  for (const item of items) {{\n"
         f"    const node = byId.get(String(item.id))!;\n"
-        f"    const parentId = (item as unknown as {{ parentId?: string | number | null }}).parentId;\n"
-        f"    const parent = parentId != null ? byId.get(String(parentId)) : undefined;\n"
+        f"    const parentRef = (item as unknown as "
+        f"{{ {parent_fname}?: string | number | null }}).{parent_fname};\n"
+        f"    const parent = parentRef != null ? byId.get(String(parentRef)) : undefined;\n"
         f"    if (parent) parent.children!.push(node);\n"
         f"    else roots.push(node);\n"
         f"  }}\n"

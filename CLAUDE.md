@@ -90,9 +90,11 @@ Features: `database` (on), `oauth2` (on), `docker` (on), `kubernetes` (on), `cic
 }]
 ```
 
-**Field types:** string, text, integer, long, decimal, boolean, date, datetime, enum.
+**Field types:** string, text, integer, long, decimal, boolean, date, datetime, enum, **reference**.
 
 **Enum fields** use a `values` array: `{"name": "status", "type": "enum", "values": ["active", "inactive"]}`. Generates Java enum class, `@Enumerated(EnumType.STRING)` on entity, TypeScript union type (`"active" | "inactive"`), and `<select>` dropdown in forms.
+
+**Reference fields** use a `target` pointing at another resource: `{"name": "departmentId", "type": "reference", "target": "department"}`. Generates a `Long` FK column on the entity (no `@ManyToOne` navigation — DTOs stay flat), a Liquibase `addForeignKeyConstraint` pointing at `{target}s(id)`, and a TypeScript `number` in the Create/Update/Response DTOs. Self-references are allowed (e.g. `department.parentId → department`) and power the `tree` page without the caller having to add `parentId` by hand. The `form` / `edit` pages auto-render a `reference` as a **Combobox** lookup against the target's list endpoint. Cross-resource references require the target resource to appear earlier in the `resources` array so its table exists when the FK is applied.
 
 **Constraints:** required, unique, maxLength, minLength, min, max, pattern.
 
@@ -140,7 +142,7 @@ Features: `docker` (on), `kubernetes` (on), `cicd` (on), `tailwind` (on).
 - `grid` — responsive card-grid (1 col mobile / 2 md / 3 lg) for a resource collection. Same paginated query as `list`. First string field becomes the CardTitle, second becomes CardDescription; remaining fields drop into the card body as label/value pairs. Enum and boolean values render as Badges for fast visual scanning. Null-safe, shows empty state spanning all grid columns.
 - `edit` — update form for an existing record. Reads `id` from `?id=` query string, fetches via `useQuery`, hydrates form state via `useEffect`, saves via PUT with `t("updatedSuccessfully")` feedback. Includes a destructive Delete button wrapped in an `AlertDialog` confirmation (Phase 0 component); plain-HTML fallback uses `window.confirm`. Same type-aware inputs and resource-lookup auto-detection as `form`.
 - `settings` — configuration form for a **singleton** resource. `GET /{resource}` returns one record, `PUT /{resource}` updates it — no `id` in the URL. Fields can be grouped via an optional `group` key and render as shadcn `Accordion` items (Phase 0), all expanded by default; ungrouped fields drop into a "General" section. Plain-HTML fallback uses bordered `<section>` headings instead of Accordion. No delete.
-- `tree` — hierarchical view for a resource with a nullable `parentId` field. Fetches up to 1000 records via `GET /{resource}`, builds a nested tree client-side (dangling children become roots if pagination cuts off an ancestor), renders with [`react-arborist`](https://github.com/brimdata/react-arborist) — collapsible, keyboard-navigable, virtualized. Node label = first string field (falls back to `id`). Clicking a leaf navigates to `./view?id={id}` (the detail-page convention). Requires `react-arborist` (auto-added to frontend-app `dependencies`).
+- `tree` — hierarchical view for a resource with a nullable self-reference field. Fetches up to 1000 records via `GET /{resource}`, builds a nested tree client-side (dangling children become roots if pagination cuts off an ancestor), renders with [`react-arborist`](https://github.com/brimdata/react-arborist) — collapsible, keyboard-navigable, virtualized. **Parent-field resolution:** first a `type: "reference"` field whose `target` equals the page's resource (preferred — use any name, e.g. `managerId`); otherwise a field literally named `parentId` (legacy convention). Node label = first string field (falls back to `id`). Clicking a leaf navigates to `./view?id={id}` (the detail-page convention). Requires `react-arborist` (auto-added to frontend-app `dependencies`).
 - `kanban` — drag-and-drop board grouped by a status enum. Columns are the enum's `values`; dropping a card PATCHes the record's status field with the new column value, with an optimistic local update so the UI never lags. Column resolution: explicit `statusField` > field named `status`/`state`/`stage`/`phase` > first enum field > single "Backlog" fallback. Uses [`@dnd-kit/core`](https://dndkit.com/) + `@dnd-kit/sortable` + `@dnd-kit/utilities` — one `SortableContext` per column, 4 px pointer-activation distance.
 - `calendar` — month / week / day calendar view via [`@schedule-x/react`](https://schedule-x.dev/). Fetches up to 1000 records and transforms them into schedule-x events. Date-field resolution: explicit `dateField` > field named `date`/`startDate`/`start`/`when` > first `date`/`datetime` field. Optional `endField` falls back to the next temporal field, or to the same field as start (single-cell event). Title = first string field (or `id`). `datetime` values are sliced to 16 chars and the ISO `T` separator is swapped for a space to match schedule-x's `YYYY-MM-DD HH:mm` format; `date` values are sliced to 10 chars. Records with null start are skipped. Graceful placeholder when the resource has no `date`/`datetime` field.
 
@@ -151,7 +153,11 @@ Features: `docker` (on), `kubernetes` (on), `cicd` (on), `tailwind` (on).
 - `enum` fields with `values` array → native `<select>` dropdown — enum value lists are short enough that a native picker stays usable.
 - `text` fields → `<textarea>`.
 - `boolean` fields → ui-kit `Checkbox` (with `--uikit`) or native checkbox.
-- **Resource lookups**: when a field name matches `{resource}Name` or `{resource}Id` and that resource exists in the pages config, the form auto-fetches and renders a ui-kit **`Combobox`** (typeahead, from Phase 0) when `--uikit` is linked — so the picker stays usable as the option list grows. Without ui-kit, falls back to a native `<select>`. Shows "Create one first" message when the referenced resource has no rows.
+- **Resource lookups**: two paths, in this order:
+  1. **Explicit** — a `type: "reference"` field with a `target` naming another resource (the first-class form). Self-references are supported (e.g. `department.parentId → department`).
+  2. **Heuristic** — name match like `{resource}Name` / `{resource}Id` against the pages-config resources (legacy convention; skips the current resource to avoid nonsense self-matches).
+
+  Either way, the form auto-fetches the target's list endpoint and renders a ui-kit **`Combobox`** (typeahead, from Phase 0) when `--uikit` is linked — so the picker stays usable as the option list grows. Without ui-kit, falls back to a native `<select>`. Shows "Create one first" message when the referenced resource has no rows.
 
 When `--uikit` is linked, pages import shadcn components (Button, Input, Table, Card, etc.). Without ui-kit, falls back to plain HTML with matching Tailwind classes.
 
@@ -241,6 +247,7 @@ src/apps_generator/
 | date | LocalDate | DATE | string |
 | datetime | LocalDateTime | TIMESTAMP | string |
 | enum | Java enum class | VARCHAR | union type (e.g. `"a" \| "b"`) |
+| reference | Long | BIGINT + FK | number |
 
 ## CSS theme
 

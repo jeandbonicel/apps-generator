@@ -16,11 +16,14 @@ def emit_form(page: dict, ctx: PageContext) -> None:
 
     # Auto-detect lookups (mutates page["fields"] in-place to preserve prior
     # behaviour — the old dispatcher did this before calling the emitter).
+    # Explicit ``reference`` fields are allowed to self-resolve (e.g. a
+    # department with a ``parentId`` reference back to ``department``); the
+    # name-heuristic branch inside ``detect_lookup`` skips the current
+    # resource to prevent nonsense matches.
     if ctx.all_resources:
-        other_resources = [r for r in ctx.all_resources if r != resource]
         for f in fields:
             if "lookup" not in f:
-                detected = detect_lookup(f, other_resources)
+                detected = detect_lookup(f, ctx.all_resources, current_resource=resource)
                 if detected:
                     f["lookup"] = detected
 
@@ -240,12 +243,14 @@ def emit_form(page: dict, ctx: PageContext) -> None:
 
     inputs_str = "\n".join(inputs)
 
-    # Build submission body (cast number fields)
+    # Build submission body (cast number fields). Reference fields are FK ids
+    # stored as ``Long`` on the backend, so they need the same Number cast as
+    # any other numeric type.
     body_fields = []
     for f in fields:
         ft = f.get("type", "string")
         fname = camel_case(f["name"])
-        if ft in ("integer", "long", "decimal"):
+        if ft in ("integer", "long", "decimal", "reference"):
             body_fields.append(f"        {fname}: form.{fname} ? Number(form.{fname}) : undefined,")
         elif ft == "boolean":
             body_fields.append(f"        {fname}: form.{fname},")

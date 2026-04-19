@@ -9,14 +9,42 @@ from apps_generator.utils.naming import pascal_case, title_case
 from .registry import PageContext
 
 
-def detect_lookup(field: dict, all_resources: list[str]) -> dict | None:
+def detect_lookup(
+    field: dict,
+    all_resources: list[str],
+    *,
+    current_resource: str | None = None,
+) -> dict | None:
     """Auto-detect if a field should be a lookup to another resource.
 
-    Matches patterns like ``dogName`` -> resource ``dog``, ``categoryId`` ->
-    resource ``category``. Returns a lookup config dict or ``None``.
+    Two paths, in order of preference:
+
+    1. **Explicit** — ``type: "reference"`` with a ``target`` naming another
+       resource. This is the first-class path: the caller has declared the
+       FK intent, so we honour it even when ``target == current_resource``
+       (self-references are the whole point of tree-style hierarchies).
+    2. **Heuristic** — name-based match for configs without an explicit
+       reference type: ``dogName`` → resource ``dog``, ``categoryId`` →
+       resource ``category``. ``current_resource`` is skipped here to
+       avoid nonsense self-matches on fields that happen to share a name
+       prefix with their own resource.
+
+    Returns a lookup config dict or ``None``.
     """
+    if field.get("type") == "reference":
+        target = field.get("target")
+        if target and target in all_resources:
+            # FK id lives on the entity; label picks the first string-ish field
+            # of the target by convention (``name``). Users can override via
+            # ``lookup.labelField`` in the page config if they've got a
+            # different display field.
+            return {"resource": target, "valueField": "id", "labelField": "name"}
+        return None
+
     fname = field["name"]
     for res in all_resources:
+        if current_resource is not None and res == current_resource:
+            continue
         res_lower = res.lower()
         fname_lower = fname.lower()
         if fname_lower in (f"{res_lower}name", f"{res_lower}id", f"{res_lower}_name", f"{res_lower}_id"):

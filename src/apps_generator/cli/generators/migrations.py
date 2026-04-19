@@ -87,6 +87,30 @@ def generate_migration(res_root: Path, entity: str, table: str, fields: list[dic
                 }
             )
 
+    # Foreign-key constraints for `reference` fields. The referenced table must
+    # already exist — self-references resolve against this same changeset's
+    # createTable; cross-resource references require the target resource to
+    # appear earlier in the resources array so its migration runs first.
+    for f in fields:
+        if f.get("type") != "reference":
+            continue
+        target = f.get("target")
+        if not target:
+            continue
+        target_table = snake_case(target) + "s"
+        col = snake_case(f["name"])
+        changeset["changes"].append(
+            {
+                "addForeignKeyConstraint": {
+                    "baseTableName": table,
+                    "baseColumnNames": col,
+                    "referencedTableName": target_table,
+                    "referencedColumnNames": "id",
+                    "constraintName": f"fk_{table}_{col}",
+                }
+            }
+        )
+
     migration_file.write_text(
         yaml.dump(
             {"databaseChangeLog": [{"changeSet": changeset}]},
