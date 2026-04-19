@@ -21,6 +21,7 @@ JAVA_TYPES = {
     "date": "LocalDate",
     "datetime": "LocalDateTime",
     "enum": "__ENUM__",  # placeholder — replaced by generated enum class name
+    "reference": "Long",  # FK id pointing at another resource's id column
 }
 
 SQL_TYPES = {
@@ -33,6 +34,7 @@ SQL_TYPES = {
     "date": "DATE",
     "datetime": "TIMESTAMP",
     "enum": "VARCHAR({maxLength})",
+    "reference": "BIGINT",
 }
 
 TS_TYPES = {
@@ -45,6 +47,7 @@ TS_TYPES = {
     "date": "string",
     "datetime": "string",
     "enum": "__ENUM__",  # placeholder — replaced by union type
+    "reference": "number",
 }
 
 JAVA_IMPORTS = {
@@ -895,6 +898,16 @@ def _gen_integration_test(test_root: Path, pkg: str, entity: str, name: str, fie
             update_field = f
             break
 
+    # Required-field validation test needs a *simple* field we can safely drop.
+    # Reference fields depend on a pre-existing target row, which the test
+    # harness doesn't bootstrap — skip them here and the validation test is
+    # either generated against a simple required field or omitted entirely.
+    required_field = None
+    for f in fields:
+        if f.get("required") and f.get("type") != "reference":
+            required_field = f
+            break
+
     update_assertion = ""
     update_json = json_body
     if update_field:
@@ -904,12 +917,6 @@ def _gen_integration_test(test_root: Path, pkg: str, entity: str, name: str, fie
     else:
         update_assertion = ";"
 
-    # Find a required field name for validation test
-    required_field = None
-    for f in fields:
-        if f.get("required"):
-            required_field = f
-            break
     validation_test = ""
     if required_field:
         # Build JSON with required field missing

@@ -219,13 +219,15 @@ def emit_settings(page: dict, ctx: PageContext) -> None:
     state_init = ", ".join(f"{k}: {v}" for k, v in defaults.items())
 
     # Hydration — same rules as edit_type: stringify numbers, slice datetime.
+    # Reference FK ids also stringify so the <input type="number"> round-trip
+    # works cleanly in the fallback renderer.
     hydrate_lines: list[str] = []
     for f in fields:
         ft = f.get("type", "string")
         fname = camel_case(f["name"])
         if ft == "boolean":
             hydrate_lines.append(f"          {fname}: data.{fname} ?? false,")
-        elif ft in ("integer", "long", "decimal"):
+        elif ft in ("integer", "long", "decimal", "reference"):
             hydrate_lines.append(f'          {fname}: data.{fname} != null ? String(data.{fname}) : "",')
         elif ft == "datetime":
             hydrate_lines.append(f'          {fname}: data.{fname} ? String(data.{fname}).slice(0, 16) : "",')
@@ -233,12 +235,12 @@ def emit_settings(page: dict, ctx: PageContext) -> None:
             hydrate_lines.append(f'          {fname}: data.{fname} ?? "",')
     hydrate_str = "\n".join(hydrate_lines)
 
-    # Body of the PUT — cast numeric fields.
+    # Body of the PUT — cast numeric fields. Reference FK ids cast too.
     body_fields: list[str] = []
     for f in fields:
         ft = f.get("type", "string")
         fname = camel_case(f["name"])
-        if ft in ("integer", "long", "decimal"):
+        if ft in ("integer", "long", "decimal", "reference"):
             body_fields.append(f"        {fname}: form.{fname} ? Number(form.{fname}) : undefined,")
         elif ft == "boolean":
             body_fields.append(f"        {fname}: form.{fname},")
